@@ -1,11 +1,11 @@
-#Automatic and Interative Hidden Markov Model creation in R
-#Authors: Daniele Gadler, Andrea Janes, Barbara Russo
-#Free University of Bolzano-Bozen 2016-2017
+# Automatic and Interative Hidden Markov Model creation in R
+## Authors: Daniele Gadler, Andrea Janes, Barbara Russo
+## Free University of Bolzano-Bozen 2016-2017
 
 
 The present repository contains R scripts to generate HMMs interactively (IIHMM) and automatically (AIHMM).  
 
-#Required Packages:
+## Required Packages:
 - "hmm.discnp"
 - "hmm"
 Make sure you install these packages in your R environment before running the scripts
@@ -14,7 +14,7 @@ Make sure you install these packages in your R environment before running the sc
 #IIHMM_generation.R
 This script allows for the creation of Hidden Markov Models iteratively, namely adding a state per iteration and constraining a set of hand-picked symbols onto the newly added state.
 
-#Steps
+## Steps
 1. Load the libraries of the "hmm.discnp" and "hmm" packages after installing them through following commands
 library("hmm.discnp")
 library("hmm")
@@ -26,10 +26,10 @@ library("hmm")
 8.1 If "stop" has value FALSE, then the process terminated, as log-likelihood has either not increased from the previous iteration or the log-likelihood of constrained HMM is less than the log-likelihood of the unconstrained HMM with same amount of states.
 8.2. If "stop" has value TRUE, then go back to line 55 with comment ITERATION_BEGIN and run all commands underneath until "GO BACK UP!.Repeat this until State 8.1 is reached.
 
-#AIHMM_Generation.R
+## AIHMM_Generation.R
 Given a certain range of k (the amount of interesting sequences to consider), this script automatically generates Hidden Markov Models by constraining all symbols not previously constrained on previous states onto the newly added state. It does so by considering all symbols in the generated top k interesting sequences.
 
-#Steps:
+## Steps:
 1. Load the libraries of the "hmm.discnp" and "hmm" packages after installing them through following commands
 library("hmm.discnp")
 library("hmm")
