@@ -1,5 +1,5 @@
 # Automatic and Interactive Hidden Markov Model creation in R
-## Authors: Daniele Gadler, Andrea Janes, Barbara Russo
+## Authors: Daniele Gadler, Barbara Russo, Andrea Janes
 ## Free University of Bolzano-Bozen 2016-2017
 
 
