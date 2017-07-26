@@ -11,7 +11,7 @@ The present repository contains R scripts to generate HMMs interactively (IIHMM)
 Make sure you install these packages in your R environment before running the scripts
 
 
-#IIHMM_generation.R
+## IIHMM_generation.R
 This script allows for the creation of Hidden Markov Models iteratively, namely adding a state per iteration and constraining a set of hand-picked symbols onto the newly added state.
 
 ## Steps
