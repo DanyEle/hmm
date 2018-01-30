@@ -10,6 +10,13 @@ The present repository contains R scripts to generate HMMs interactively (IIHMM)
 - "hmm"
 Make sure you install these packages in your R environment before running the scripts
 
+Also set the following global variables:
+
+SEPARATOR: The separator used to separate different columns in the dataset
+MARK_SEQUENCE_IDS:   TRUE if there is no sequence ID associated to every action in the dataset. It will be added automatically by the mark_sequence_ids function. You may hence want to configure this function as well, to identify how a sequence begins
+                    FALSE is there is already a sequence ID associated to every single action in the file
+
+
 
 ## IIHMM_generation.R
 This script allows for the creation of Hidden Markov Models iteratively, namely adding a state per iteration and constraining a set of hand-picked symbols onto the newly added state.
