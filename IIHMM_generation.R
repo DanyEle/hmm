@@ -4,12 +4,26 @@
 #Barbara 
 #pathToData <- "~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_ID.csv"
 #Daniele
-pathToData <- "Dataset_1_year.csv" 
-sink(paste("Manager_Validation_OneYear_again.txt"))
+pathToData <- "WindowsPhone_WITH_ID.csv" 
+#IMPORTANT! Dataset needs to have the following two headers:
+#"sample","SequenceID"
+#"sample": for the actions performed
+#SequenceID (optional): for marking the sequence an action belongs to. If the SequenceID is not present,
+#it can be added by uncommenting the mark_sequences_of_actions_with_id function
+
+#sink(paste("Manager_Validation_OneYear_again.txt"))
+SEPARATOR = ";"
+#Set this to TRUE this if the dataset has no "SequenceIDs" column
+MARK_SEQUENCE_IDS = TRUE
+
 
 k <- 5
 
 
+
+#To be executed line by line, following the instructions contained within the file
+#Alternatively, can run via command line like:
+#loopOverSequenceSet(DATA_PATH, k)
 loopOverSequenceSet <- function(pathToData, k){
       print(format(Sys.time(), "%a %b %d %X %Y"))
 	    print(paste("Initializing the process..."))
@@ -211,29 +225,40 @@ validatePickedSymbols <- function(toMoveSymbols, AllSymbolsArray)
 initializeHMM <- function(pathToData){   
   
   #alternative code in case the set does not contain sequence IDs
-  #DATASET_LOCATION ="~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_All.csv"
-  #RawData <- read.csv(DATASET_LOCATION, sep=";", header=T)
-  #head(RawData)
-  #sample_without<-RawData[,2]  
-  #mark the sequence ID if not alrady done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
-  #Sequences <- mark_sequences_of_actions_with_ID(sample)
   
-  #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
-  sample<- read.csv(pathToData, sep=",", header=T)
+  if(MARK_SEQUENCE_IDS == TRUE)
+  {
+    #Will add one column on the left in any case, containing an index per action
+    SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
+    #Actually identify the actions themselves now
+    #mark the sequence ID if not already done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
+    sequences <- mark_sequences_of_actions_with_ID(SampleData)
+    
+  }
+  else if(MARK_SEQUENCE_IDS == FALSE)
+  {
+    #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
+    sequences<- read.csv(pathToData, sep=SEPARATOR, header=T)
+    # sequences contains columns "sample"[] and "SequenceID" 
+
+  }
+  
+  #Good, data frame successfully loaded. Now remove irrelevant symbols
+  
   print("Removing irrelevant symbols ")
   #pre-processing symbols: remove symbols that are not relevant. Output: sequences (with ID and cleaned from irrelevant symbols),symbols, theta, HMMTrained
   SymbolsToRemove = c("Navigate Back to HubPage", "Navigate to HubPage", "Start", "End")
-  newSample<-sample
+  
+  newSample<-sequences
   for(x  in SymbolsToRemove){
     temp<-newSample[-which(newSample$sample==x),]
     newSample<-temp
   }
   
-  # sequences contains two columns "sample" and "SequenceID" 
-  sequences<-newSample
+  sequences = newSample
   
   #Compute theta
-  K = sequences[nrow(sequences),2]
+  K = sequences[nrow(sequences),2] #Amount of columns
   MinLengthSave = 2
   theta = MinLengthSave / K
   print("theta is ")
@@ -255,7 +280,7 @@ initializeHMM <- function(pathToData){
   return(list(sequences,symbols,theta,HMMTrained))
 }
 
-#Create a dataframe with sequences and thir IDs
+#Create a dataframe with sequences and their IDs
 mark_sequences_of_actions_with_ID<-function(sample){
   sampleObs<-data.frame(sample)
   prova<-grep("Start", sampleObs$sample, invert=F)
@@ -801,11 +826,12 @@ computeModelLogLikelihood <- function(sortedSequences, sequences, constrainedTra
   if(LogLikConst >= LogLikUnconst){
   	stop=TRUE
     print("The Log-Likelihood is no-worse than the unconstrained model") 
+    print(constrainedTrainedHMM)
     }else{
-      
       #TODO: print HMM.
-    
-  	stop("Stopping process.")    
+      print("The log-likelihood is worse than the unconstrained model. Following is the newly constrained model")
+      print(constrainedTrainedHMM)
+  	stop("Stopping process. The log-likelihood is worse than the unconstrained model.")    
   }
   return(list(stop, constrainedTrainedHMM, LogLikConst)) 
 }

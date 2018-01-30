@@ -4,12 +4,19 @@
 #Barbara 
 #pathToData <- "~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_ID.csv"
 #Daniele
-pathToData <- "C:/Users/Daniele/Dropbox/pc_sharing/Thesis/R/Datasets/WindowsPhone_Daniele.csv" #
+
+#What the dataset path is
+pathToData <- "WindowsPhone_ID.csv" #
+#How columns are separated from one another
+SEPARATOR = ";"
+#Set this to TRUE this if the dataset has no "SequenceIDs" column
+MARK_SEQUENCE_IDS = TRUE
+
 
 k <- 1
 while(k <= 5)
 {
-  sink(paste("Experiment_2_First_Approach/test_baum_3_", k, "_interesting_sequence.txt"))
+  sink(paste("hmm_with_", k, "_interesting_sequences.txt"))
   loopOverSequenceSet(pathToData, k)
   k <- k + 1
   sink()
@@ -157,29 +164,40 @@ displaySymbolsPerState <- function(HMMTrained)
 initializeHMM <- function(pathToData){   
   
   #alternative code in case the set does not contain sequence IDs
-  #DATASET_LOCATION ="~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_All.csv"
-  #RawData <- read.csv(DATASET_LOCATION, sep=";", header=T)
-  #head(RawData)
-  #sample_without<-RawData[,2]  
-  #mark the sequence ID if not alrady done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
-  #Sequences <- mark_sequences_of_actions_with_ID(sample)
   
-  #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
-  sample<- read.csv(pathToData, sep=";", header=T)
+  if(MARK_SEQUENCE_IDS == TRUE)
+  {
+    #Will add one column on the left in any case, containing an index per action
+    SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
+    #Actually identify the actions themselves now
+    #mark the sequence ID if not already done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
+    sequences <- mark_sequences_of_actions_with_ID(SampleData)
+    
+  }
+  else if(MARK_SEQUENCE_IDS == FALSE)
+  {
+    #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
+    sequences<- read.csv(pathToData, sep=SEPARATOR, header=T)
+    # sequences contains columns "sample"[] and "SequenceID" 
+    
+  }
+  
+  #Good, data frame successfully loaded. Now remove irrelevant symbols
+  
   print("Removing irrelevant symbols ")
   #pre-processing symbols: remove symbols that are not relevant. Output: sequences (with ID and cleaned from irrelevant symbols),symbols, theta, HMMTrained
   SymbolsToRemove = c("Navigate Back to HubPage", "Navigate to HubPage", "Start", "End")
-  newSample<-sample
+  
+  newSample<-sequences
   for(x  in SymbolsToRemove){
     temp<-newSample[-which(newSample$sample==x),]
     newSample<-temp
   }
   
-  # sequences contains two columns "sample" and "SequenceID" 
-  sequences<-newSample
+  sequences = newSample
   
   #Compute theta
-  K = sequences[nrow(sequences),2]
+  K = sequences[nrow(sequences),2] #Amount of columns
   MinLengthSave = 2
   theta = MinLengthSave / K
   print("theta is ")
