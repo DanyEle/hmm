@@ -12,9 +12,12 @@ pathToData <- "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Daniele/Wi
 #it can be added by uncommenting the mark_sequences_of_actions_with_id function
 
 #sink(paste("Manager_Validation_OneYear_again.txt"))
-SEPARATOR = ";"
+SEPARATOR_DATASET = ";"
 #Set this to TRUE this if the dataset has no "SequenceIDs" column
-MARK_SEQUENCE_IDS = TRUE
+MARK_SEQUENCE_IDS = FALSE
+
+#To be used for Damevski's dataset, in case we may need to carry out some pre-processing in other functions / files
+LOAD_CUSTOM_SEQUENCES = TRUE
 
 
 k <- 5
@@ -98,8 +101,7 @@ loopOverSequenceSet <- function(pathToData, k){
 		  #SKIP!!! Pick symbols from sequences manually
 		  #toMoveSymbols <- selectSymbolsTopKInterestingSequences(intersection, q, k)
 
-		  #ASK THE MANAGER for the indices of interesting sequences that should be 
-		  
+		  #ASK THE MANAGER for the indices of interesting sequences that should be put in the following vector
 		  toMoveSymbols = c("Article: Search", "Article: open", "Navigate to ArticleStockChangeView", "Store Item")
 		  AllSymbolsArray = colnames(HMMTrained$emissionProbs)
 		  allSymbolsMatched = validatePickedSymbols(toMoveSymbols, AllSymbolsArray)
@@ -226,36 +228,51 @@ initializeHMM <- function(pathToData){
   
   #alternative code in case the set does not contain sequence IDs
   
-  if(MARK_SEQUENCE_IDS == TRUE)
+  
+  
+  if(LOAD_CUSTOM_SEQUENCES == FALSE)
   {
-    #Will add one column on the left in any case, containing an index per action
-    SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
-    #Actually identify the actions themselves now
-    #mark the sequence ID if not already done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
-    sequences <- mark_sequences_of_actions_with_ID(SampleData)
+    if(MARK_SEQUENCE_IDS == TRUE)
+    {
+      #Will add one column on the left in any case, containing an index per action
+      SampleData <- read.csv(pathToData, sep=SEPARATOR_DATASET, header=T)
+      #Actually identify the actions themselves now
+      #mark the sequence ID if not already done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
+      sequences <- mark_sequences_of_actions_with_ID(SampleData)
+      
+    }
+    else if(MARK_SEQUENCE_IDS == FALSE)
+    {
+      #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
+      sequences<- read.csv(pathToData, sep=SEPARATOR_DATASET, header=T)
+      # sequences contains columns "sample" and "SequenceID" 
+      
+    }
+    
+    #Good, data frame successfully loaded. Now remove irrelevant symbols
+    
+    
+    print("Removing irrelevant symbols ")
+    #pre-processing symbols: remove symbols that are not relevant. Output: sequences (with ID and cleaned from irrelevant symbols),symbols, theta, HMMTrained
+    SymbolsToRemove = c("Navigate Back to HubPage", "Navigate to HubPage", "Start", "End")
+    
+    newSample<-sequences
+    for(x  in SymbolsToRemove){
+      temp<-newSample[-which(newSample$sample==x),]
+      newSample<-temp
+    }
+    
+    sequences = newSample
     
   }
-  else if(MARK_SEQUENCE_IDS == FALSE)
+  else if(LOAD_CUSTOM_SEQUENCES == TRUE)
   {
-    #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
-    sequences<- read.csv(pathToData, sep=SEPARATOR, header=T)
-    # sequences contains columns "sample"[] and "SequenceID" 
-
+    sequences = load_marked_sequences()
+    
+    
   }
   
-  #Good, data frame successfully loaded. Now remove irrelevant symbols
   
-  print("Removing irrelevant symbols ")
-  #pre-processing symbols: remove symbols that are not relevant. Output: sequences (with ID and cleaned from irrelevant symbols),symbols, theta, HMMTrained
-  SymbolsToRemove = c("Navigate Back to HubPage", "Navigate to HubPage", "Start", "End")
-  
-  newSample<-sequences
-  for(x  in SymbolsToRemove){
-    temp<-newSample[-which(newSample$sample==x),]
-    newSample<-temp
-  }
-  
-  sequences = newSample
   
   #Compute theta
   K = sequences$SequenceID[nrow(sequences)]
@@ -453,37 +470,40 @@ computePrefixFrequency <- function(sortedSequences, i, OHat, t){
   {
     j = 1
   }
- 
-  numberOfSequences <- length(sortedSequences)
-
- #select first t elements
-  Oj <-sortedSequences[[j]]
-  OjHat <-head(Oj,t)
-  
-  #check sequences before the current analyzed one. THE PAPER IS WRONG HERE
-  #Daniele: introduced i > 1 and j > 1 check to prevent going out of lower bounds if checking backwards.
-  while(i > 1 & j > 1 & isTRUE(all.equal(OjHat, OHat) == TRUE) ) {
-    n = n + 1
-    j = j - 1
+  if(!j==0){
+    numberOfSequences <- length(sortedSequences)
+    
+    #select first t elements
     Oj <-sortedSequences[[j]]
     OjHat <-head(Oj,t)
+    
+    #check sequences before the current analyzed one. THE PAPER IS WRONG HERE
+    #Daniele: introduced i > 1 and j > 1 check to prevent going out of lower bounds if checking backwards.
+    #Hei! Daniele in questo modo non conti il caso j==1 che invece va contato (per es. i=2 e j=1); ho coretto il codice come sotto
+    while(j > 0 & isTRUE(all.equal(OjHat, OHat) == TRUE) ) {
+      n = n + 1
+      j = j - 1
+      if(j>0){
+        Oj <-sortedSequences[[j]]
+        OjHat <-head(Oj,t)
+      }
+    }
   }
-  
-  	j = i + 1
+  j = i + 1
   if(j<=numberOfSequences){
-  	#update first element
-  	Oj <-sortedSequences[[j]]
-  	OjHat <-head(Oj,t)
-  
-  	#check sequences after
-  	while(j <= numberOfSequences & isTRUE(all.equal(OjHat, OHat) == TRUE) ) {
-    	n = n + 1 
-    	j = j + 1
-    	if(j<=numberOfSequences){
-    		Oj <-sortedSequences[[j]]
-    		OjHat <-head(Oj,t)
-    		}
-  	}
+    #update first element
+    Oj <-sortedSequences[[j]]
+    OjHat <-head(Oj,t)
+    
+    #check sequences after
+    while(j <= numberOfSequences & isTRUE(all.equal(OjHat, OHat) == TRUE) ) {
+      n = n + 1 
+      j = j + 1
+      if(j<=numberOfSequences){
+        Oj <-sortedSequences[[j]]
+        OjHat <-head(Oj,t)
+      }
+    }
   }
   return (n / numberOfSequences)
 }

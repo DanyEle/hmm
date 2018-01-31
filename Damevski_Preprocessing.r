@@ -6,8 +6,10 @@ THRESHOLD_RARE_MSG = 0.03
 
 
 
-
-main <- function()
+#######################
+#####MAIN##############
+#######################
+load_marked_sequences <- function()
 {
   
   #1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
