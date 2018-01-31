@@ -7,39 +7,55 @@ THRESHOLD_RARE_MSG = 0.03
 
 
 
-#1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
-#[[1]] = all unique developers
-#[[2]] = all unique messages corresponding to the developer
-list_devs_messages = load_unique_messages_for_developers(DATA_PATH)
+main <- function()
+{
+  
+  #1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
+  #[[1]] = all unique developers
+  #[[2]] = all unique messages corresponding to the developer
+  list_devs_messages = load_unique_messages_for_developers(DATA_PATH)
+  
+  all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
+  
+  messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages)
+  
+  
+  #2: Remove cursor movement messages (too frequent) and rare messages identified above from the full dataset loaded
+  #We may omit passing messages_to_remove, because no rare messages were actually identified.
+  #Also load the timestamp and the developer id, alongside the message
+  sequences_filtered = load_and_filter_dataset(list_devs_messages, messages_to_remove = c(), DATA_PATH)
+  
+  #3: Form debug sessions. 
+  sequences_marked = mark_debug_sessions_with_ID(sampleObs=sequences_filtered)
+  
+  return(sequences_marked)
+  
+  
+  
+}
 
-all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
-
-messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages)
-
-
-#2: Remove cursor movement messages (too frequent) and rare messages identified above from the full dataset loaded
-#We may omit passing messages_to_remove, because no rare messages were actually identified.
-#Also load the timestamp and the developer id, alongside the message
-sequences_filtered = load_and_filter_dataset(list_devs_messages, folder_datasets=DATA_PATH)
-
-#3: Form debug sessions. 
-sequences_marked = mark_debug_sessions_with_ID
 
 mark_debug_sessions_with_ID <- function(sampleObs){
   
-  #List of messages representing interactions of developers with Visual Studio IDE
-  
-  msgs_IDE_interactions = ('^View.VisualStudioBgOrFg|View.Code Metrics Results|View.Code Metrics Results$')
+  #List of messages representing interactions of developers with Visual Studio IDE for debugging
+  msgs_IDE_interactions = ('^View.Locals|Dbug.QuickWatch|Debug.AddWatch|Debug.StepOver|Debug.StepInto|Debug.StepOut|De-
+bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View.CallStack|Debug.CallStack|View.Autos|View.Output|Debug.Output
+                           |Debug.StopDebugging|Debug.Start|Debug.StartDebugTarget|TestExplorer.DebugSelectedTests|Debug.Restart|Debug.AttachtoProcess|
+                           TestExplorer.DebugAllTestsInContext|TestExplorer.DebugAllTests|View.SolutionExplorer|Debug.ToggleBreakpoint|Debug.EnableBreakpoint|
+                           View.FindandReplace|View.FindResults1|View.SandoSearch|Edit.FindinFiles|Edit.GoToDefinition|View.FindSymbolResults|
+                           Edit.FindAllReferences|ReSharper.ReSharper.GotoDeclaration|Edit.NavigateTo|ReSharper.ReSharper.FindUsages|Edit.GoToDeclaration|View.CallHierarchy$')
   
   
   indexes_matches <-grep(pattern=msgs_IDE_interactions, sampleObs$sample, invert=F)
  
   index = 1
   last_timestamp = strptime(sampleObs$timestamp[1], format="%Y-%m-%d %H:%M:%S")
-  last_developer = samepleObs$developer[1]
+  last_developer = sampleObs$developer[1]
   
   #if a sequence ID is 0, then the sequence is not part of a debugging session
   sequenceIds = c(0*1:nrow(sampleObs))
+  
+  print("Marking all the messages with a debug sequence ID")
 
   for(i in 1: (nrow(sampleObs)))
   {
@@ -70,7 +86,6 @@ mark_debug_sessions_with_ID <- function(sampleObs){
     {
       #no match. again, check if the timestamp is within 30 seconds from the last action in the debugging session
       
-      
       #is within it, then assign the sequence ID to the current action
       if( (cur_timestamp <= last_timestamp + 30) && (cur_developer == last_developer))
       {
@@ -82,12 +97,16 @@ mark_debug_sessions_with_ID <- function(sampleObs){
         sequenceIds[i] = 0
       }
     }
-    
-    
   }
   
   sampleObs$SequenceID<-sequenceIds
-  return(sampleObs)	
+  
+  sampleObsOutput = sampleObs[which(sampleObs$SequenceID != 0), ]
+  
+  
+  #now remove from the data frame all the sequences that are marked with a sequence ID = 0
+  
+  return(sampleObsOutput)	
 }
 
 
@@ -109,6 +128,7 @@ load_unique_messages_for_developers <- function(folder_datasets)
  i = 1
  for (dataset in all_datasets)
  {
+   print(paste("Loading unique messages from dataset ", dataset))
    dataLoaded <- read.csv(paste(folder_datasets,"/", dataset, sep=""), sep=SEPARATOR, header=T)
    uniqueMessages = unique(dataLoaded$message)
    developer = dataLoaded$developer_id[1]
@@ -118,6 +138,7 @@ load_unique_messages_for_developers <- function(folder_datasets)
  }
  return(list(all_devs, all_unique_messages))
 }
+
 
 load_all_existing_unique_messages <- function(INFO_PATH, list_devs_messages)
 {
@@ -161,6 +182,11 @@ find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages
   
   messages_to_remove = as.array(data_frame_messages$message[which(data_frame_messages$count <= THRESHOLD_RARE_MSG)])
   
+  if(length(messages_to_remove) == 0)
+  {
+    print(paste("No actions occurs with <= ", THRESHOLD_RARE_MSG, " frequency"))
+  }
+  
 
   return(messages_to_remove)
   
@@ -168,6 +194,7 @@ find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages
 
 load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c(), folder_datasets)
 {
+  #Too frequent messages
   messages_to_remove = c(messages_to_remove, "View.OnChangeCaretLine", "View.OnChangeScrollInfo")
 
   
@@ -190,6 +217,7 @@ load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c()
     i = i + 1
   }
   
+  print("Merging datasets into a single data structure")
   #Now combine the three lists as columns of a single data frame, flattening them at the same time. Access them like:
   #sequences$sample, sequences$timestamp, sequences$developer
   sequences = do.call(rbind, Map(data.frame, sample=messages_loaded, timestamp=timestamps_loaded, developer=developers_loaded))
@@ -200,7 +228,7 @@ load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c()
   #Here, actually filter out the symbols to remove
   for (message in messages_to_remove)
   {
-    sequences_filtered = sequences_filtered[-which(sequences$sample==message),]
+    sequences_filtered = sequences_filtered[which(sequences_filtered$sample!=message),]
   }
   
   return(sequences_filtered)
