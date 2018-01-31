@@ -36,6 +36,7 @@ mark_debug_sessions_with_ID <- function(sampleObs){
  
   index = 1
   last_timestamp = strptime(sampleObs$timestamp[1], format="%Y-%m-%d %H:%M:%S")
+  last_developer = samepleObs$developer[1]
   
   #if a sequence ID is 0, then the sequence is not part of a debugging session
   sequenceIds = c(0*1:nrow(sampleObs))
@@ -43,6 +44,7 @@ mark_debug_sessions_with_ID <- function(sampleObs){
   for(i in 1: (nrow(sampleObs)))
   {
     cur_timestamp = strptime(sampleObs$timestamp[i], format="%Y-%m-%d %H:%M:%S")
+    cur_developer = sampleObs$developer[i]
     
     #We have a match. Now check if the timestamp of the current sequence is within 30 seconds of the last one
     if(i %in% indexes_matches)
@@ -53,17 +55,16 @@ mark_debug_sessions_with_ID <- function(sampleObs){
       if(cur_timestamp <= last_timestamp + 30)
       {
         sequenceIds[i] = index
-        print("Assigning index, not increasing")
       }
       else
       {
         #it is not within 30 seconds, then start a new debugging session increasing the index
         
-        print("Assigning index, increasing")
         index = index + 1
         sequenceIds[i] = index
       }
       last_timestamp = cur_timestamp
+      last_developer = cur_developer
     }
     else
     {
@@ -71,15 +72,13 @@ mark_debug_sessions_with_ID <- function(sampleObs){
       
       
       #is within it, then assign the sequence ID to the current action
-      if(cur_timestamp <= last_timestamp + 30)
+      if( (cur_timestamp <= last_timestamp + 30) && (cur_developer == last_developer))
       {
-        print("NO M. Assigning index")
         sequenceIds[i] = index
       }
       else
       {
         #not within 30 seconds, then just assign 0. stray action not within a debugging session
-        print("NO M. Assigning 0")
         sequenceIds[i] = 0
       }
     }
