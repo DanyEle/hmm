@@ -4,7 +4,7 @@
 #Barbara 
 #pathToData <- "~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_ID.csv"
 #Daniele
-pathToData <- "WindowsPhone_WITH_ID.csv" 
+pathToData <- "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Daniele/WindowsPhone_WITH_ID.csv" 
 #IMPORTANT! Dataset needs to have the following two headers:
 #"sample","SequenceID"
 #"sample": for the actions performed
@@ -258,7 +258,7 @@ initializeHMM <- function(pathToData){
   sequences = newSample
   
   #Compute theta
-  K = sequences[nrow(sequences),2] #Amount of columns
+  K = sequences$SequenceID[nrow(sequences)]
   MinLengthSave = 2
   theta = MinLengthSave / K
   print("theta is ")
