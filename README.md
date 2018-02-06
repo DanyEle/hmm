@@ -32,8 +32,8 @@ library("hmm")
 4. If sequences are not marked with IDs, use the method "mark_sequences_of_actions_with_ID" to mark them with IDs in the procedure "initializeHMM".
 6. Set k, the amount of interesting sequences that should be considered in the present iteration.
 7. Run line-by-line (CTRL + R / Command + R) all commands in the procedure "loopOverSequenceSet" until line 129 with comment	#GO BACK UP! is reached. Symbols in the array "toMoveSymbols" at line 89 ought to be picked manually out of the set of proposed interesting sequences.
-8.1 If "stop" has value FALSE, then the process terminated, as log-likelihood has either not increased from the previous iteration or the log-likelihood of constrained HMM is less than the log-likelihood of the unconstrained HMM with same amount of states.
-8.2. If "stop" has value TRUE, then go back to line 55 with comment ITERATION_BEGIN and run all commands underneath until "GO BACK UP!.Repeat this until State 8.1 is reached.
+8.1 If "continue" has value FALSE, then the process terminated, as log-likelihood has either not increased from the previous iteration or the log-likelihood of constrained HMM is less than the log-likelihood of the unconstrained HMM with same amount of states.
+8.2. If "continue" has value TRUE, then go back to line 55 with comment ITERATION_BEGIN and run all commands underneath until "GO BACK UP!.Repeat this until State 8.1 is reached.
 
 ## AIHMM_Generation.R
 Given a certain range of k (the amount of interesting sequences to consider), this script automatically generates Hidden Markov Models by constraining all symbols not previously constrained on previous states onto the newly added state. It does so by considering all symbols in the generated top k interesting sequences. (for example, setting k = 5, the script will generate AIHMMs with 1,2,3,4,5 interesting sequences)..
@@ -42,13 +42,10 @@ Given a certain range of k (the amount of interesting sequences to consider), th
 1. Load the libraries of the "hmm.discnp" and "hmm" packages after installing them through following commands
 library("hmm.discnp")
 library("hmm")
-2. Set the global variables as desired
+2. Set the global variables as desired, as well as the output files in the main
 2. Load all functions in the file Common_Functions.R
 3. Load all functions in the file AIHMM_Generation.R
-4. Select the following code, present in the main() function of AIHMM_Generation.R
-![Whole while loop in the main() function](http://www.dgadler.it/img/github_run_aihmm.png "Code to select")
-5. Run the selected code (CTRL + R / Command + R)
-
+4. Call main() to launch the script for AIHMMs' generation
 
 
 
