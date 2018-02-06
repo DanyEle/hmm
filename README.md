@@ -15,6 +15,8 @@ Also set the following global variables:
 SEPARATOR: The separator used to separate different columns in the dataset
 MARK_SEQUENCE_IDS:   TRUE if there is no sequence ID associated to every action in the dataset. It will be added automatically by the mark_sequence_ids function. You may hence want to configure this function as well, to identify how a sequence begins
                     FALSE is there is already a sequence ID associated to every single action in the file
+LOAD_CUSTOM_SEQUENCES: TRUE if you want to specify your own dataset(s) with custom pre-processing operations. 
+                       FALSE if you want to use one standard dataset on that the script runs by default. 
 
 
 
@@ -34,18 +36,18 @@ library("hmm")
 8.2. If "stop" has value TRUE, then go back to line 55 with comment ITERATION_BEGIN and run all commands underneath until "GO BACK UP!.Repeat this until State 8.1 is reached.
 
 ## AIHMM_Generation.R
-Given a certain range of k (the amount of interesting sequences to consider), this script automatically generates Hidden Markov Models by constraining all symbols not previously constrained on previous states onto the newly added state. It does so by considering all symbols in the generated top k interesting sequences.
+Given a certain range of k (the amount of interesting sequences to consider), this script automatically generates Hidden Markov Models by constraining all symbols not previously constrained on previous states onto the newly added state. It does so by considering all symbols in the generated top k interesting sequences. (for example, setting k = 5, the script will generate AIHMMs with 1,2,3,4,5 interesting sequences)..
 
 ## Steps:
 1. Load the libraries of the "hmm.discnp" and "hmm" packages after installing them through following commands
 library("hmm.discnp")
 library("hmm")
-2. Load all scripts underneath the while loop ending at line 18 into the environment
-3. Set the path where the dataset is stored into the variable "pathToData"
-4. Set the output path and files name for the generated HMMs at line 12
-5. Set the k range at line 9 and 10
-5. Run the while loop line-by-line starting from line 10
-
+2. Set the global variables as desired
+2. Load all functions in the file Common_Functions.R
+3. Load all functions in the file AIHMM_Generation.R
+4. Select the following code, present in the main() function:
+![Whole while loop in the main() function](http://www.dgadler.it/img/github_run_aihmm.png "Code to select")
+5. Run the selected code (CTRL + R / Command + R)
 
 
 
