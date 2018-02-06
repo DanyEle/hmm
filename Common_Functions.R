@@ -64,7 +64,7 @@ initializeHMM <- function(pathToData){
   }
   else if(LOAD_CUSTOM_SEQUENCES == TRUE)
   {
-    #sequences = load_marked_sequences()
+    sequences <- sequences_global
     
     
   }
@@ -108,6 +108,16 @@ mark_sequences_of_actions_with_ID<-function(sample){
   }
   sampleObs$SequenceID<-temp
   return(sampleObs)	
+}
+
+load_custom_sequences_if_needed <- function()
+{
+  if(LOAD_CUSTOM_SEQUENCES == TRUE)
+  {
+    sequences = load_marked_sequences()
+    return(sequences)
+    
+  }
 }
 
 ################## This is to train the HMM model
@@ -606,13 +616,13 @@ newStateHMMTrainingConstrained <-function(newState, toMoveSymbols, HMMTrained, s
   
   # modelPerformance = computeModelLogLikelihood(sortedSequences, sequences, symbols, constrainedTrainedHMM)
   nrStates<- length(c(states, newState))
-  return(list(constrainedTrainedHMM, toMoveSymbols, nrStates, modelPerformance[[3]]))
+  return(list(constrainedTrainedHMM, toMoveSymbols, nrStates, modelPerformance[[3]], modelPerformance[[1]]))
 }
 
 #requires package "hmm.discnp"
 #To be used in case the unconstrained emission matrix is build from scratch. Loglikhood does not change with no states: run it once for all
 computeModelLogLikelihood <- function(sortedSequences, sequences, constrainedTrainedHMM, LogLikUnconst, HMMTrained){
-  stop<-FALSE
+  continue<-FALSE
   library("hmm.discnp")
   
   #data of constrained model
@@ -629,25 +639,26 @@ computeModelLogLikelihood <- function(sortedSequences, sequences, constrainedTra
   
   # the constrained model must have loglikelihood >= than the one of the unconstrained model 
   if(LogLikConst >= LogLikUnconst){
-    stop=TRUE
+    continue=TRUE
     print("The Log-Likelihood is no-worse than the unconstrained model") 
     print(constrainedTrainedHMM)
   }else{
     #TODO: print HMM.
-    print("The log-likelihood is worse than the unconstrained model. The previous model was the best one so far.Printing it here:")
+    print("Stopping process. The log-likelihood is worse than the unconstrained model. The previous model was the best one so far.Printing it here:")
     print(HMMTrained)
-    stop("Stopping process. The log-likelihood is worse than the unconstrained model.")    
+    continue=FALSE
+    #stop("Stopping process. The log-likelihood is worse than the unconstrained model.")    
   }
-  return(list(stop, constrainedTrainedHMM, LogLikConst)) 
+  return(list(continue, constrainedTrainedHMM, LogLikConst)) 
 }
 
 #Compare log-likelihood at current iteration with log-likelihood in next iteration
 compareModelLogLikelihoodAtIteration<-function(logLikCur, logLikNext){
-  stop<-FALSE
+  continue<-FALSE
   # the next model must have loglikelihood > than the one of the current model 
   if(logLikNext > logLikCur)
   {
-    stop=TRUE
+    continue=TRUE
     print("log likelihood next HMM, more states ")
     print(logLikNext)
     print("log likelihood current HMM")
@@ -658,5 +669,5 @@ compareModelLogLikelihoodAtIteration<-function(logLikCur, logLikNext){
   print("log likelihood current HMM")
   print(logLikCur)
   
-  return(stop)
+  return(continue)
 }

@@ -6,25 +6,28 @@
 #Daniele
 
 #What the dataset path is
-pathToData <- "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Daniele/WindowsPhone_WITH_ID.csv" #
+#pathToData <- "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Daniele/WindowsPhone_WITH_ID.csv" #
 #How columns are separated from one another
 SEPARATOR_DATASET = ";"
 #Set this to TRUE this if the dataset has no "SequenceIDs" column
-MARK_SEQUENCE_IDS = TRUE
+MARK_SEQUENCE_IDS = FALSE
 
 #TRUE = For Damevski's dataset or other datasets, in case we may need to carry out some pre-processing in other functions / files
-LOAD_CUSTOM_SEQUENCES = FALSE
+LOAD_CUSTOM_SEQUENCES = TRUE
 
 
 main <- function()
 {
   k <- 1
+  
+  sequences_global <<- load_custom_sequences_if_needed() 
+ 
   while(k <= 5)
   {
-    sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
+    #sink, not paste
+    #sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
     loopOverSequenceSet(pathToData, k)
     k <- k + 1
-    sink()
     print(paste("Done with k = ", k, sep=""))
     
   }
@@ -123,7 +126,17 @@ loopOverSequenceSet <- function(pathToData, k){
     	# It returns: continue = FALSE or TRUE to be used for looping
     	#continue = FALSE --> Do not continue! Model quality has degraded or no interesting sequences have been found
     	#continue = TRUE --> Do continue! Model quality has increased and interesting sequences have been found
-    	continue <- compareModelLogLikelihoodAtIteration(LogLikCur, LogLikConstrained)
+    	
+    	#Check if a continue was already present, resulting from the log-likelihood of the newly constructed and constrained model being lower than
+    	#the log-likelihood of an unconstrained model
+    	continue <- newStateHMMConstrained[[5]]
+    	if(continue == TRUE)
+    	{
+    	  #Compare current log-likelihood with the one of the previous iteration
+    	  continue <- compareModelLogLikelihoodAtIteration(LogLikCur, LogLikConstrained)
+    	  
+    	}
+    	
     	
     	print(format(Sys.time(), "%a %b %d %X %Y"))
     	print(continue)
@@ -147,7 +160,7 @@ loopOverSequenceSet <- function(pathToData, k){
       print(paste("Final Amount of states = " , nrStates))
       displaySymbolsPerState(HMMTrained)
       
-      print("Done!")
+      print(paste("DONE in function for k=", k))
 }
 
 

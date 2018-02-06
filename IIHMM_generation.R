@@ -30,6 +30,7 @@ k <- 5
 loopOverSequenceSet <- function(pathToData, k){
       print(format(Sys.time(), "%a %b %d %X %Y"))
 	    print(paste("Initializing the process..."))
+	    sequences_global <<- load_custom_sequences_if_needed() 
       initialisedProcess<-initializeHMM(pathToData)
       sequencesIDs<<-initialisedProcess[[1]]
       symbols<-initialisedProcess[[2]]

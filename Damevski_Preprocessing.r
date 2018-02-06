@@ -1,8 +1,11 @@
-DATA_PATH = "C:/Users/Daniele/Documents/Workplace_Damevski/Data_Damevski_Small"
+DATA_PATH = "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Damevski_Small"
 INFO_PATH = "C:/Users/Daniele/Documents/Workplace_Damevski/Info_Dataset"
 
 SEPARATOR = ","
 THRESHOLD_RARE_MSG = 0.03
+
+#Print an update every 2000 messages processes
+FREQUENCY_PRINT = 2000
 
 
 
@@ -61,6 +64,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
 
   for(i in 1: (nrow(sampleObs)))
   {
+    
     cur_timestamp = strptime(sampleObs$timestamp[i], format="%Y-%m-%d %H:%M:%S")
     cur_developer = sampleObs$developer[i]
     
@@ -99,11 +103,19 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
         sequenceIds[i] = 0
       }
     }
+    
+    if(i %% FREQUENCY_PRINT == 0)
+    {
+      print(paste(i, " messages have been processed."))
+    }
+    
   }
   
   sampleObs$SequenceID<-sequenceIds
   
   sampleObsOutput = sampleObs[which(sampleObs$SequenceID != 0), ]
+  
+  print(paste("Amount of sequences identified: ", sampleObsOutput$SequenceID[nrow(sampleObsOutput)], sep=""))
   
   
   #now remove from the data frame all the sequences that are marked with a sequence ID = 0
@@ -224,6 +236,8 @@ load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c()
   #sequences$sample, sequences$timestamp, sequences$developer
   sequences = do.call(rbind, Map(data.frame, sample=messages_loaded, timestamp=timestamps_loaded, developer=developers_loaded))
   
+  print(paste("Merged dataset has ", length(sequences$sample), " messages.", sep=""))
+  
 
   sequences_filtered = sequences
   
@@ -232,6 +246,9 @@ load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c()
   {
     sequences_filtered = sequences_filtered[which(sequences_filtered$sample!=message),]
   }
+  
+  print(paste("After filtering frequent messages, dataset has ", length(sequences_filtered$sample), " messages.", sep=""))
+  
   
   return(sequences_filtered)
   
