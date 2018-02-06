@@ -45,7 +45,7 @@ library("hmm")
 2. Set the global variables as desired
 2. Load all functions in the file Common_Functions.R
 3. Load all functions in the file AIHMM_Generation.R
-4. Select the following code, present in the main() function:
+4. Select the following code, present in the main() function of AIHMM_Generation.R
 ![Whole while loop in the main() function](http://www.dgadler.it/img/github_run_aihmm.png "Code to select")
 5. Run the selected code (CTRL + R / Command + R)
 
