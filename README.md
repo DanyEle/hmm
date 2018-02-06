@@ -1,6 +1,6 @@
 # Automatic and Interactive Hidden Markov Model creation in R
 ## Authors: Daniele Gadler, Barbara Russo, Andrea Janes
-## Free University of Bolzano-Bozen 2016-2017
+## Free University of Bolzano-Bozen 2016-2018
 
 
 The present repository contains R scripts to generate HMMs interactively (IIHMM) and automatically (AIHMM).  
