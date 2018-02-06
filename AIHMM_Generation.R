@@ -20,12 +20,14 @@ main <- function()
 {
   k <- 1
   
+  sink(paste("hmm_loading_dataset.txt"))
   sequences_global <<- load_custom_sequences_if_needed() 
+  sink()
+  
  
   while(k <= 5)
   {
-    #sink, not paste
-    #sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
+    sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
     loopOverSequenceSet(pathToData, k)
     k <- k + 1
     print(paste("Done with k = ", k, sep=""))
