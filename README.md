@@ -8,6 +8,7 @@ The present repository contains R scripts to generate HMMs interactively (IIHMM)
 ## Required Packages:
 - "hmm.discnp"
 - "hmm"
+- "stringr"
 Make sure you install these packages in your R environment before running the scripts
 
 Also set the following global variables:
@@ -46,10 +47,5 @@ library("hmm")
 2. Load all functions in the file Common_Functions.R
 3. Load all functions in the file AIHMM_Generation.R
 4. Call main() to launch the script for AIHMMs' generation
-
-
-
-
-
 
 
