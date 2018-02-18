@@ -15,6 +15,10 @@ MARK_SEQUENCE_IDS = FALSE
 #TRUE = For Damevski's dataset or other datasets, in case we may need to carry out some pre-processing in other functions / files
 LOAD_CUSTOM_SEQUENCES = TRUE
 
+#Requires LOAD_CUSTOM_SEQUENCES = TRUE
+FILTER_SU = TRUE
+FILTER_MOST_FREQUENT_SU  = TRUE
+
 
 main <- function()
 {
@@ -51,6 +55,8 @@ loopOverSequenceSet <- function(pathToData, k){
       #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
       sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs)
       sortedSequences <<- sortedSequencesIDs[[1]]
+      sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
+      sortedSequences <<- filter_sequences_with_most_frequent_symbols(sortedSequences)
       print("Computing loglikelihood for ALL DATA state")
       #compute the loglikelihood of the model with one state
       library("hmm.discnp")
@@ -104,17 +110,8 @@ loopOverSequenceSet <- function(pathToData, k){
 		  q<-unlist(lapply(intersection,`all.equal`,character(0)))		
 		  
 		  
-		  #toMoveSymbols_1 <-unlist(intersection[which(!q==TRUE)[[1]]])
-		  #toMoveSymbols_2 <-unlist(intersection[which(!q==TRUE)[[2]]]) 
-		  #toMoveSymbols<-union(toMoveSymbols_1,toMoveSymbols_2) 	
-		  #we can do it for any number. take the xth top interesting sequence.
-	    #toMoveSymbols_x <-unlist(intersection[which(!q==TRUE)[[]]]) 
-		  
 		  toMoveSymbols <- selectSymbolsTopKInterestingSequences(intersection, q, k)
 
-		  
-    	#toMoveSymbols <- toMoveSymbols_1
-    	
     	print(toMoveSymbols)   
     	
     	newState<-paste("State_",i)     	
@@ -164,6 +161,49 @@ loopOverSequenceSet <- function(pathToData, k){
       
       print(paste("DONE in function for k=", k))
 }
+
+filter_sequences_with_SU_if_needed <- function(sortedSequences)
+{
+  if(LOAD_CUSTOM_SEQUENCES)
+  {
+    if(FILTER_SU)
+    {
+      symbols_undesirable = c("Debug.Restart", "Build.Cancel", "File.TfsUndoCheckout", "ClassViewContextMenus.ClassViewProject.TfsContextUndoCheckout",
+        "ClassViewContextMenus.ClassViewProject.SourceControl.TfsContextUndoCheckout", "TestExplorer.CancelTests", "View.SolutionExplorer")
+      
+      #ONE LINER. Get the sequences containing of the undesirable symbols
+      sequences_with_SU = sortedSequences[(which(sapply(sortedSequences, function(x) any(symbols_undesirable %in% x))==TRUE))]
+      return(sequences_with_SU)
+    }
+  }
+  
+  return(sortedSequences)
+}
+
+
+#Input: sortedSequences that have already been filtered out by function filter_sequences_with_SU_if_needed
+filter_sequences_with_most_frequent_symbols <- function(sortedSequences)
+{
+  if(LOAD_CUSTOM_SEQUENCES)
+  {
+    if(FILTER_MOST_FREQUENT_SU)  
+    {
+      #get all the unique symbols present in the sortedSequences
+      unique_symbols = unique(unlist(sortedSequences))
+      
+      amount_symbols_in_sequences = sum(table(unlist(sortedSequences)))
+
+      #compute frequency of unique_symbols in the sequences containing the SU
+      table_frequency_symbols = table(unlist(sortedSequences))/ amount_symbols_in_sequences
+      
+      #now take the top 50%
+      
+    }
+  }
+  
+  return(sortedSequences)
+}
+
 
 
 compareModelLogLikelihoodConstrained<-function(LogLikConstrained, LogLikUnconstrained){
