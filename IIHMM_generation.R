@@ -4,7 +4,7 @@
 #Barbara 
 #pathToData <- "~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_ID.csv"
 #Daniele
-pathToData <- "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Daniele/WindowsPhone_WITH_ID.csv" 
+#pathToData <- "C:/Users/Daniele/Documents/Workplace_Damevski/Datasets_Daniele/WindowsPhone_WITH_ID.csv" 
 #IMPORTANT! Dataset needs to have the following two headers:
 #"sample","SequenceID"
 #"sample": for the actions performed
@@ -17,10 +17,10 @@ SEPARATOR_DATASET = ";"
 MARK_SEQUENCE_IDS = FALSE
 
 #To be used for Damevski's dataset, in case we may need to carry out some pre-processing in other functions / files
-LOAD_CUSTOM_SEQUENCES = FALSE
+LOAD_CUSTOM_SEQUENCES = TRUE
 
 
-k <- 5
+k <- 1
 
 
 
@@ -69,7 +69,7 @@ loopOverSequenceSet <- function(pathToData, k){
       LogLikCur<<-LogLikInit
       
       #Need to change k?
-      #k <- 2
+      k <- 2
       #ITERATION_BEGIN
       #while(continue){
         
@@ -102,8 +102,8 @@ loopOverSequenceSet <- function(pathToData, k){
 		  #SKIP!!! Pick symbols from sequences manually
 		  #toMoveSymbols <- selectSymbolsTopKInterestingSequences(intersection, q, k)
 
-		  #ASK THE MANAGER for the indices of interesting sequences that should be put in the following vector
-		  toMoveSymbols = c("Article: Search", "Article: open", "Navigate to ArticleStockChangeView", "Store Item")
+		  #ASK THE MANAGER for the symbols in interesting sequences that should be put in the following vector
+		  toMoveSymbols = c("Debug.Start", "View.File")
 		  AllSymbolsArray = colnames(HMMTrained$emissionProbs)
 		  allSymbolsMatched = validatePickedSymbols(toMoveSymbols, AllSymbolsArray)
 		  
@@ -112,7 +112,7 @@ loopOverSequenceSet <- function(pathToData, k){
 		  #toMoveSymbols <- selectSymbolsPickedInterestingSequences(intersection, q,listIndecesInteresting)
 		  
     	#ASK THE MANAGER WHAT THE NEW STATE NAME SHOULD BE
-    	newStateName = "Change location of article in stock"
+    	newStateName = "Starting Debug"
     	
     	newState<- newStateName  	
     	#Build the HMM with the new states and the symols to move in. It returns: [[1]] the HMM with new state, [[2]] the symbols to move (toMoveSymbols), [[3]] the nr of states, and [[4]]the Model Loglikelihood 

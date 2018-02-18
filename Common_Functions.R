@@ -4,7 +4,16 @@ displaySymbolsPerState <- function(HMMTrained)
   #for all states
   for(i in 1:length(HMMTrained$States))
   {
-    print(paste("State ", i, " has symbols:"))
+    if(i == 1)
+    {
+      print(paste("All Data State has symbols:"))
+      
+    }
+    else
+    {
+      print(paste("State ", i, " has symbols:"))
+      
+    }
     h = 1
     #for all symbols
     for(j in 1:length(HMMTrained$emissionProbs[i, ]))
