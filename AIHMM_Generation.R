@@ -17,7 +17,7 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 
 #Requires LOAD_CUSTOM_SEQUENCES = TRUE
 FILTER_SU = TRUE
-FILTER_MOST_FREQUENT_SU  = TRUE
+FILTER_MOST_FREQUENT_SU  = FALSE
 
 
 main <- function()
@@ -55,8 +55,9 @@ loopOverSequenceSet <- function(pathToData, k){
       #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
       sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs)
       sortedSequences <<- sortedSequencesIDs[[1]]
+      sortedSequencesBeforeFiltering <- sortedSequences
       sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
-      sortedSequences <<- filter_sequences_with_most_frequent_symbols(sortedSequences)
+      sortedSequences <<- filter_sequences_with_most_frequent_symbols(sortedSequences, sortedSequencesBeforeFiltering)
       print("Computing loglikelihood for ALL DATA state")
       #compute the loglikelihood of the model with one state
       library("hmm.discnp")
@@ -182,7 +183,7 @@ filter_sequences_with_SU_if_needed <- function(sortedSequences)
 
 
 #Input: sortedSequences that have already been filtered out by function filter_sequences_with_SU_if_needed
-filter_sequences_with_most_frequent_symbols <- function(sortedSequences)
+filter_sequences_with_most_frequent_symbols <- function(sortedSequences, sortedSequencesBeforeFiltering)
 {
   if(LOAD_CUSTOM_SEQUENCES)
   {
@@ -196,7 +197,16 @@ filter_sequences_with_most_frequent_symbols <- function(sortedSequences)
       #compute frequency of unique_symbols in the sequences containing the SU
       table_frequency_symbols = table(unlist(sortedSequences))/ amount_symbols_in_sequences
       
-      #now take the top 50%
+      #the median separates top 50% symbols from lower 50% symbols
+      median = median(table_frequency_symbols)
+      
+      #now take the top 50% most frequent symbols in the table
+      top_most_frequent_symbols = which(table_frequency_symbols >= median)
+      
+      #And now take all the sequences that contain ALL most frequent symbols found
+      sequences_with_all_frequent_symbols = sortedSequencesBeforeFiltering[(which(sapply(sortedSequencesBeforeFiltering, function(x) all(top_most_frequent_symbols %in% x))==TRUE))]
+      
+      return(sequences_with_all_frequent_symbols)
       
     }
   }
