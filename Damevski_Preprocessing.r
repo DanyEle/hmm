@@ -30,20 +30,20 @@ load_marked_sequences <- function()
   #Also load the timestamp and the developer id, alongside the message
   sampleObs = load_and_filter_dataset(list_devs_messages, messages_to_remove = c(), DATA_PATH)
   
-  no_cores = 4
+  #If dealing with a small dataset, set it to twice the amount of cores desired
+  no_cores = 5
   partitions = find_partitions_based_on_cores(sampleObs, no_cores)
   
   indexes = find_indices_for_partitions(partitions)
   
   library("parallel")
-  #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2!
-  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = 1)
+  #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! 
+  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = length(partitions)) 
   
+  #Now merge the different partitions
   sequences_marked = combine_sequences_marked(sequences_marked_split)
   
   return(sequences_marked)
-  
-  
   
 }
 
@@ -98,13 +98,29 @@ find_partitions_based_on_cores <- function(sampleObs, no_cores)
     partitions[[i]] = subset
     #Can split the sample here
     
+    #continue after the end until the current developer is over and a new sequence can safely start
+    end = find_splitting_point_different_developer(end, sampleObs, i, no_cores)
+    end = end - 1
+    
+    if(i == no_cores || end == nrow(sampleObs))
+    {
+      end = end + 1
+    }
+    
     subset = sampleObs[start:end,]
     
     print(paste("Partition [", i , "] start = ", start, " end = ", end, " size = ", nrow(subset) ))
     
     partitions[[i]] = subset
     #increase all indexes    
-    start = start + size_partition
+    start = end + 1
+    
+    if(end == nrow(sampleObs))
+    {
+     print(paste("Identified #partitions with contiguous developer =", length(partitions)))
+     return(partitions) 
+    }
+    
     end = min(end + size_partition, nrow(sampleObs))
     i = i + 1
   }
@@ -113,14 +129,18 @@ find_partitions_based_on_cores <- function(sampleObs, no_cores)
 }
 
 
-#Apply the same function to every single piece.
-find_splitting_point_in_half_and_developer_equal <- function(start, end, sampleObs)
+
+find_splitting_point_different_developer <- function(start,  sampleObs, i, no_cores)
 {
+  if(i == no_cores)
+  {
+    return(nrow(sampleObs))
+  }
   
-  last_developer = sampleObs$developer[amount_rows_half]
+  last_developer = sampleObs$developer[start]
   
   #Check where developer changes
-  for(i in amount_rows_half:amount_rows)
+  for(i in start:nrow(sampleObs))
   {
     cur_developer = sampleObs$developer[i]
     
@@ -132,10 +152,9 @@ find_splitting_point_in_half_and_developer_equal <- function(start, end, sampleO
   }
   
   #Worst case, last point matches the end of the sample
-  return(amount_rows)
+  return(nrow(sampleObs))
   
 }
-
 
 
 
