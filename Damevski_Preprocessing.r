@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski_Small"
+DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset"
 
 SEPARATOR = ","
@@ -61,6 +61,7 @@ combine_sequences_marked <- function(sequences_marked_split)
     list_data_frames[[i]] = data_frame_cur
   }
   
+  library("data.table")
   #now "unwrap" the list into one single data frame
   merged_data_frames = rbindlist(list_data_frames)
   

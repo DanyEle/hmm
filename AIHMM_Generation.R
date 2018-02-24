@@ -16,25 +16,28 @@ MARK_SEQUENCE_IDS = FALSE
 LOAD_CUSTOM_SEQUENCES = TRUE
 
 #Requires LOAD_CUSTOM_SEQUENCES = TRUE
+
+#Find all sequences containing SU [Symbols Undesirable]
 FILTER_SU = TRUE
-FILTER_MOST_FREQUENT_SU  = FALSE
+#Filter all sequences containing the top 50% most frequent symbols contained in all sequences containing SU
+FILTER_MOST_FREQUENT_SU  = TRUE
 
 
 main <- function()
 {
   k <- 1
   
-  sink(paste("hmm_loading_dataset.txt"))
-  sequences_global <<- load_custom_sequences_if_needed() 
-  sink()
+  #sink(paste("4.1_AIHMM_Built/hmm_loading_dataset.txt"))
+  #sequences_global <<- load_custom_sequences_if_needed() 
+  #sink()
   
  
   while(k <= 5)
   {
-    sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
+    sink(paste("4.1_AIHMM_Built/hmm_with_", k, "_interesting_sequences.txt", sep=""))
     loopOverSequenceSet(pathToData, k)
     k <- k + 1
-    print(paste("Done with k = ", k, sep=""))
+    print(paste("Now with k = ", k, sep=""))
     
   }
   
@@ -169,8 +172,15 @@ filter_sequences_with_SU_if_needed <- function(sortedSequences)
   {
     if(FILTER_SU)
     {
-      symbols_undesirable = c("Debug.Restart", "Build.Cancel", "File.TfsUndoCheckout", "ClassViewContextMenus.ClassViewProject.TfsContextUndoCheckout",
-        "ClassViewContextMenus.ClassViewProject.SourceControl.TfsContextUndoCheckout", "TestExplorer.CancelTests", "View.SolutionExplorer")
+      symbols_undesirable = c("Edit.Undo","View.NavigateBackward","Edit.SelectionCancel","Edit.Redo",
+                              "View.Source Not Available",
+                              "TeamFoundationContextMenus.PendingChangesPageChangestoInclude.TfsContextPendingChangesPageUndo",
+                              "Debug.Restart","Build.Cancel","View.Source Not Found","File.TfsUndoCheckout","View.No Symbols Loaded",
+                              "ClassViewContextMenus.ClassViewProject.TfsContextUndoCheckout",
+                              "ClassViewContextMenus.ClassViewProject.SourceControl.TfsContextUndoCheckout",
+                              "View.No Source Available","TestExplorer.CancelTests","TeamFoundationContextMenus.BuildExplorer.RetryBuild",
+                              "TeamFoundationContextMenus.SourceControlHistoryChangesets.TfsContextHistoryRollbackChangesInThisVersion",
+                              "TeamFoundationContextMenus.SourceControlExplorer.TfsContextExplorerRollback")
       
       #ONE LINER. Get the sequences containing of the undesirable symbols
       sequences_with_SU = sortedSequences[(which(sapply(sortedSequences, function(x) any(symbols_undesirable %in% x))==TRUE))]
