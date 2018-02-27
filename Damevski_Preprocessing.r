@@ -31,14 +31,14 @@ load_marked_sequences <- function()
   sampleObs = load_and_filter_dataset(list_devs_messages, messages_to_remove = c(), DATA_PATH)
   
   #If dealing with a small dataset, set it to twice the amount of cores desired
-  no_cores = 1
+  no_cores = 28
   partitions = find_partitions_based_on_cores(sampleObs, no_cores)
   
   indexes = find_indices_for_partitions(partitions)
   
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! 
-  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = length(partitions)) 
+  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = (length(partitions) - 1)) 
   
   #Now merge the different partitions
   sequences_marked = combine_sequences_marked(sequences_marked_split)
@@ -119,7 +119,7 @@ find_partitions_based_on_cores <- function(sampleObs, no_cores)
     #increase all indexes    
     start = end + 1
     
-    if(end == nrow(sampleObs))
+    if(end == nrow(sampleObs) || end == nrow(sampleObs) - 1)
     {
      print(paste("Identified #partitions with contiguous developer =", length(partitions)))
      return(partitions) 
@@ -233,7 +233,6 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
     {
       print(paste(i, " messages have been processed."))
     }
-    
   }
   
   time_after_loop = proc.time()
@@ -416,6 +415,3 @@ display_symbols_frequency<- function(sample)
   
   return(sampleFreq)
 }
-
-
-
