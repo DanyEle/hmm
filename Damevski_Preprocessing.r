@@ -1,11 +1,11 @@
-DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset"
 
 SEPARATOR = ","
 THRESHOLD_RARE_MSG = 0.03
 
 #Print an update every 2000 messages processes
-FREQUENCY_PRINT = 2000
+FREQUENCY_PRINT = 5000
 
 
 
@@ -14,6 +14,7 @@ FREQUENCY_PRINT = 2000
 #######################
 load_marked_sequences <- function()
 {
+  sink("Full_dataset.txt")
   
   #1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
   #[[1]] = all unique developers
@@ -22,23 +23,26 @@ load_marked_sequences <- function()
   
   all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
   
-  messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages)
-  
+  #messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages)
+  messages_to_remove = c()
   
   #2: Remove cursor movement messages (too frequent) and rare messages identified above from the full dataset loaded
   #We may omit passing messages_to_remove, because no rare messages were actually identified.
   #Also load the timestamp and the developer id, alongside the message
   sampleObs = load_and_filter_dataset(list_devs_messages, messages_to_remove = c(), DATA_PATH)
   
-  #If dealing with a small dataset, set it to twice the amount of cores desired
-  no_cores = 28
+  library("parallel")
+  no_cores = detectCores() 
+  #Find Partitions where the developer ID changes
   partitions = find_partitions_based_on_cores(sampleObs, no_cores)
   
   indexes = find_indices_for_partitions(partitions)
   
-  library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! 
-  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = (length(partitions) - 1)) 
+  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = 7) 
+  
+  #sequences_marked_sequential = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = 1) 
+  
   
   #Now merge the different partitions
   sequences_marked = combine_sequences_marked(sequences_marked_split)
@@ -106,9 +110,10 @@ find_partitions_based_on_cores <- function(sampleObs, no_cores)
     end = find_splitting_point_different_developer(end, sampleObs, i, no_cores)
     end = end - 1
     
-    if(i == no_cores || end == nrow(sampleObs))
+    #if almost at the end, then just go for the end :)
+    if(end == (nrow(sampleObs) -1))
     {
-      end = end + 1
+      end = nrow(sampleObs)
     }
     
     subset = sampleObs[start:end,]
@@ -237,7 +242,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
   
   time_after_loop = proc.time()
   elapsed_time = time_after_loop[3] - time_before_loop[3]
-  print(paste("Algorithm has run in ", elapsed_time))
+  print(paste("Algorithm has run in ", elapsed_time, "for data frame of size", nrow(sampleObs) ))
   
   sampleObs$SequenceID<-sequenceIds
   #now remove from the data frame all the sequences that are marked with a sequence ID = 0
@@ -246,7 +251,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
   last_sequence_id = sampleObsOutput$SequenceID[nrow(sampleObsOutput)]
   amount_sequences = last_sequence_id - index_initial + 1
   
-  print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
+ # print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
   
   
   return(sampleObsOutput)	
@@ -267,7 +272,7 @@ load_unique_messages_for_developers <- function(folder_datasets)
  i = 1
  for (dataset in all_datasets)
  {
-   print(paste("Loading unique messages from dataset ", dataset))
+  # print(paste("Loading unique messages from dataset ", dataset))
    dataLoaded <- read.csv(paste(folder_datasets,"/", dataset, sep=""), sep=SEPARATOR, header=T)
    uniqueMessages = unique(dataLoaded$message)
    developer = dataLoaded$developer_id[1]
@@ -347,7 +352,7 @@ load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c()
   
   for (dataset in all_datasets)
   {
-    print(paste("Loading dataset from: ", dataset))
+    #print(paste("Loading dataset from: ", dataset))
     dataLoaded <- read.csv(paste(folder_datasets,"/", dataset, sep=""), sep=SEPARATOR, header=T)
     messages_loaded[[i]] = as.array(dataLoaded$message)
     timestamps_loaded[[i]] = as.array(dataLoaded$timestamp)
