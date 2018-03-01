@@ -78,8 +78,6 @@ initializeHMM <- function(pathToData)
     
   }
   
-  
-  
   #Compute theta
   K = sequences$SequenceID[nrow(sequences)]
   MinLengthSave = 2
@@ -236,7 +234,7 @@ baumWelchRecursionFixed <- function (hmm, observations){
 ################## This is Algorithm 2
 
 #Sort sequences and their IDs. used in getThetaFrequentSequences
-#Input: a list of two vectors (sequences, IDS) 
+#Input: a data frame with multiple vectors (sequences, IDS) 
 #Output: a list of two lists of vectors (sequences and IDs)
 sortSequencesWithIDs <- function(sequences){
   print(format(Sys.time(), "%a %b %d %X %Y"))
@@ -245,13 +243,23 @@ sortSequencesWithIDs <- function(sequences){
   sequencesLists<-list()
   sequencesLists1<-list()
   sequencesLists2<-list()
-  for(i in unique(sequences$SequenceID)){
-    sequencesLists[[i]]<-sequences[sequences$SequenceID==i,]
+  
+  
+  for(i in 1:length(unique(sequences$SequenceID)))
+  {
+    sequenceId = unique(sequences$SequenceID)[[i]]
+      
+    #Take all the actions of the current sequence
+    sequencesLists[[i]]<-sequences[sequences$SequenceID==sequenceId,]
     sequencesLists1[[i]]<-sapply(sequencesLists[[i]]$sample,as.character)
     sequencesLists2[[i]]<-sequencesLists[[i]]$SequenceID
   }
   
-  #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. It removes the null elements, i.e. i=3
+  #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. 
+  #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
+  #It removes the null elements, i.e. i=3
+  
+  #get the amount of elements in every single element of the list "sequencesLists", i.e: the sequence length
   sequenceLengths <- sapply(sequencesLists, nrow)  
   dataNormalized1 <- as.data.frame(do.call(rbind,lapply(sequencesLists1, `length<-`,max(unlist(sequenceLengths)))),stringsAsFactors=FALSE)
   dataNormalized2 <- as.data.frame(do.call(rbind,lapply(sequencesLists2, `length<-`,max(unlist(sequenceLengths)))))
@@ -268,7 +276,10 @@ sortSequencesWithIDs <- function(sequences){
   #remove NA values form each sequence	
   orderedSequences<-list()
   orderedIDs<-list()
-  for(i in 1:nrow(myDataFrameS)){
+  
+
+  for(i in 1:nrow(myDataFrameS))
+  {
     orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
     orderedIDs[[i]]<-newDataFrameID[i,][-which(is.na(newDataFrameID[i,]))]
   }
