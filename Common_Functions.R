@@ -1,13 +1,5 @@
 
 
-process_matrix_geany <- function()
-{
-  
-  
-}
-
-
-
 displaySymbolsPerState <- function(HMMTrained)
 {
   #for all states

@@ -18,23 +18,23 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 #Requires LOAD_CUSTOM_SEQUENCES = TRUE
 
 #Find all sequences containing SU [Symbols Undesirable]
-FILTER_SU = TRUE
+FILTER_SU = FALSE
 #Filter all sequences containing the top 50% most frequent symbols contained in all sequences containing SU
-FILTER_MOST_FREQUENT_SU  = TRUE
+FILTER_MOST_FREQUENT_SU  = FALSE
 
 
 main <- function()
 {
   k <- 1
   
-  #sink(paste("4.1_AIHMM_Built/hmm_loading_dataset.txt"))
-  #sequences_global <<- load_custom_sequences_if_needed() 
-  #sink()
+  sink(paste("hmm_loading_dataset.txt"))
+  sequences_global <<- load_custom_sequences_if_needed() 
+  sink()
   
  
   while(k <= 5)
   {
-    sink(paste("4.1_AIHMM_Built/hmm_with_", k, "_interesting_sequences.txt", sep=""))
+    sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
     loopOverSequenceSet(pathToData, k)
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
