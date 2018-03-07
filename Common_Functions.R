@@ -80,7 +80,8 @@ initializeHMM <- function(pathToData)
   
   #Compute theta
   K = sequences$SequenceID[nrow(sequences)]
-  MinLengthSave = 2
+  #just for seeing if it runs faster
+  MinLengthSave = 10
   theta = MinLengthSave / K
   print("theta is ")
   print(theta)
@@ -244,6 +245,9 @@ sortSequencesWithIDs <- function(sequences){
   sequencesLists1<-list()
   sequencesLists2<-list()
   
+  print("Here, sorting sequences and IDs")	
+  
+  print(length(unique(sequences$SequenceID)))
   
   for(i in 1:length(unique(sequences$SequenceID)))
   {
@@ -401,11 +405,96 @@ getThetaFrequentSequences <- function(sortedSequences,theta){
 
 ############### Algorithm 3. Generate Probable sequences ###################
 
+
+getThetaProbableSequences<-function(HMMTrained, theta){
+  #Theta-Probable sequences as global variables
+  thetaProbableProbabilities <<- list()
+  thetaProbableSequences <<- list()
+  
+  #initialize the index of the two global list variables ThetaProbableProbabilities, ThetaProbableSequences
+  #populate the global list variables ThetaProbableProbabilities, ThetaProbableSequences.
+  
+  
+  generateProbableSequencesParallel(HMMTrained, theta)
+  
+  #put them together into a single list.
+  thetaProbableValues = list(thetaProbableSequences, thetaProbableProbabilities)
+  return(thetaProbableValues)
+}   
+
+
+#Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
+generateProbableSequencesParallel<-function(HMMTrained, theta){
+  symbols<-as.vector(HMMTrained$Symbols)
+  M <- length(symbols)
+  print(M)
+  
+  
+  partitions = identify_partitions_symbols
+  
+  #Assign a chunk of symbols to each worker
+  
+  for (j in 1:M) 
+  {
+    #Every worker gets a chuck of the symbols.
+    
+    print(j)
+    # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
+    init <- symbols[j]
+    sequence <- c(init, symbols[1])
+    forwardProb = forward(HMMTrained, sequence)
+    # this is the inductive case
+    generateHMMSequencesIteration(HMMTrained, init, forwardProb, theta, symbols)
+  }
+}
+
+#Input: M: size of the data structure to partition
+#       n: amount of workers that will process the work in parallel
+identify_partitions_symbols <- function(n, symbols)
+{
+  M = length(symbols)
+  partitions =  list() 
+
+  delta = round(M / n, digits=0)
+  
+  start = 1
+  end = delta
+  continue = TRUE
+  i = 0
+  while(i < n && continue == TRUE)
+  {
+    end = (delta * (i + 1)) + 1
+    
+    start = (delta * i)  + 2
+    if(i == 0)
+    {
+      start = 1
+    }
+    if(i == n - 1)
+    {
+      end = M
+      continue = FALSE
+    }
+    
+    i = i + 1
+    
+    print(i)
+    print(paste(start, end))
+    partitions[[i]] = symbols[start:end]
+    
+  }
+  
+  return(partitions)
+  
+}
+
 #Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
 generateProbableSequences<-function(HMMTrained, theta){
   symbols<-as.vector(HMMTrained$Symbols)
   M <- length(symbols)
+  print(M)
   for (j in 1:M) {
+    print(j)
     # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
     init <- symbols[j]
     sequence <- c(init, symbols[1])
@@ -416,6 +505,8 @@ generateProbableSequences<-function(HMMTrained, theta){
   
 }
 
+
+
 #used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
 generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, theta, symbols) {	
   if(length(sequence)==1){
@@ -424,9 +515,13 @@ generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, the
   
   if(forwardProbSum > theta){
     #saved as global variables
-    thetaProbableSequences[[x]] <<- sequence
-    thetaProbableProbabilities[[x]] <<- forwardProbSum
-    x <<- x + 1
+    Sys.sleep(0.01)
+    #print(sequence)
+    thetaProbableSequences[[length(thetaProbableSequences)+1]] <<- sequence
+    print(sequence)
+    print(thetaProbableSequences)
+    thetaProbableProbabilities[[length(thetaProbableProbabilities)+1]] <<- forwardProbSum
+    #index = index + 1
     
     #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
     for (i in 1:length(symbols)) {
@@ -440,20 +535,6 @@ generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, the
   
 }  
 
-getThetaProbableSequences<-function(HMMTrained, theta){
-  #Theta-Probable sequences as global variables
-  thetaProbableProbabilities <<- list()
-  thetaProbableSequences <<- list()
-  
-  #initialize the index of the two global list variables ThetaProbableProbabilities, ThetaProbableSequences
-  x <<- 1
-  #populate the global list variables ThetaProbableProbabilities, ThetaProbableSequences.
-  generateProbableSequences(HMMTrained, theta)
-  
-  #put them together into a single list.
-  thetaProbableValues = list(thetaProbableSequences, thetaProbableProbabilities)
-  return(thetaProbableValues)
-}   
 
 
 #
