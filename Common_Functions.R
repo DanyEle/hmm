@@ -75,13 +75,14 @@ initializeHMM <- function(pathToData)
   {
     sequences <- sequences_global
     
-    
   }
   
-  #Compute theta
-  K = sequences$SequenceID[nrow(sequences)]
+  #Compute theta. Solved issue with theta being computed maxed on the max. sequence ID
+  
+  #FIXED ZE BUG
+  K = length(unique(sequences$SequenceID))
   #just for seeing if it runs faster
-  MinLengthSave = 10
+  MinLengthSave = 2
   theta = MinLengthSave / K
   print("theta is ")
   print(theta)
@@ -245,7 +246,6 @@ sortSequencesWithIDs <- function(sequences){
   sequencesLists1<-list()
   sequencesLists2<-list()
   
-  print("Here, sorting sequences and IDs")	
   
   print(length(unique(sequences$SequenceID)))
   
@@ -838,6 +838,8 @@ getThetaProbableSequences<-function(HMMTrained, theta){
   thetaProbableProbabilities <<- list()
   thetaProbableSequences <<- list()
   
+  index <<- 1
+  
   #initialize the index of the two global list variables ThetaProbableProbabilities, ThetaProbableSequences
   #populate the global list variables ThetaProbableProbabilities, ThetaProbableSequences.
   
@@ -876,13 +878,9 @@ generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, the
   
   if(forwardProbSum > theta){
     #saved as global variables
-    Sys.sleep(0.01)
-    #print(sequence)
-    thetaProbableSequences[[length(thetaProbableSequences)+1]] <<- sequence
-    print(sequence)
-    print(thetaProbableSequences)
-    thetaProbableProbabilities[[length(thetaProbableProbabilities)+1]] <<- forwardProbSum
-    #index = index + 1
+    thetaProbableSequences[[index]] <<- sequence
+    thetaProbableProbabilities[[index]] <<- forwardProbSum
+    index <<- index + 1
     
     #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
     for (i in 1:length(symbols)) {
