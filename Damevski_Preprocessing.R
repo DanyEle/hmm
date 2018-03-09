@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset"
 
 SEPARATOR = ","
@@ -14,8 +14,6 @@ FREQUENCY_PRINT = 5000
 #######################
 load_marked_sequences <- function()
 {
-  sink("Full_dataset.txt")
-  
   #1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
   #[[1]] = all unique developers
   #[[2]] = all unique messages corresponding to the developer
@@ -35,6 +33,8 @@ load_marked_sequences <- function()
   no_cores = detectCores() 
   #Find Partitions where the developer ID changes
   partitions = find_partitions_based_on_cores(sampleObs, no_cores)
+  
+  print(paste("Here amount partitions", length(partitions)))
   
   indexes = find_indices_for_partitions(partitions)
   

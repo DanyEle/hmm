@@ -689,6 +689,7 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
   #Theta-Probable intersectin with Theta-Frequent (viceversa holds too)
   thetaSequencesIntersection = intersect(thetaProbableSequences[[1]], thetaFrequentSequences[[1]])
   
+  print(length(thetaSequencesUnion))
   #loop through all sequences that belong either to Theta-Frequent or to Theta-Probable.
   for(i in 1:length(thetaSequencesUnion)){
     sequence = thetaSequencesUnion[[i]]

@@ -28,7 +28,9 @@ main <- function()
   k <- 1
   
   sink(paste("hmm_loading_dataset.txt"))
-  sequences_global <<- load_custom_sequences_if_needed() 
+  #DANIELE LOADED BEFOREHAND
+  #sequences_global <<- load_custom_sequences_if_needed() 
+  sequences_global <<- sequences_marked
   sink()
   
  
@@ -56,7 +58,10 @@ loopOverSequenceSet <- function(pathToData, k){
       theta<<-initialisedProcess[[3]]
       HMMTrained<<-initialisedProcess[[4]]      
       #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
-      sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs)
+     
+      #DANIELE LOAD BEFOREHAND
+      sortedSequencesIDs <<- sortedSequencesIDs
+      #sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs)
       sortedSequences <<- sortedSequencesIDs[[1]]
       sortedSequencesBeforeFiltering <- sortedSequences
       sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
@@ -103,7 +108,7 @@ loopOverSequenceSet <- function(pathToData, k){
     	interestingSequences<-computeAllSequencesInterestingness(thetaFrequentSequences, thetaProbableSequences, HMMTrained,theta)
       	      	
     	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
-    	sortedInterestingSequences<-sortSequencesByInterstingness(interestingSequences)     	
+    	sortedInterestingSequences<-sortSequencesByInterstingness(interestingSequences)     		  	thetaProbableSequences <- get
       print(format(Sys.time(), "%a %b %d %X %Y"))
     	print("Building Model with one more state and the following symbols")
       	
