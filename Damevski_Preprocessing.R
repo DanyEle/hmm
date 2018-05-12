@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
@@ -55,7 +55,6 @@ load_marked_sequences <- function()
   
   #Find Partitions where the developer ID changes
   #partitions = create_partitions(sampleObs, start_indexes_)
-  
   print(paste("Here amount partitions", length(partitions)))
   
   indexes = find_indices_for_partitions(partitions)

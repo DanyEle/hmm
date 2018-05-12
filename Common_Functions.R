@@ -1,4 +1,57 @@
 
+#Input: the set of sortedSequences
+#       the amount of workers onto that the work is gonna be parallelized
+#Output: X partitions, where sortedSequences is divided into X chunks. X = amount_workers passed as input.
+find_partitions_for_sorted_sequences <- function(sortedSequences, amount_workers)
+{
+  #didn't find any automatic way, so let's do it by hand..
+  
+  
+  partitions = list()
+  partition_size = ceiling(length(sortedSequences) / amount_workers)
+  
+  start = 1
+  
+  for(i in 1:amount_workers)
+  {
+    partition_start = start
+    
+    partition_end = i * partition_size
+    #if going slightly beyond the actual length (because of ceiling function), then cut it
+    if(partition_end >= length(sortedSequences))
+    {
+      partition_end = length(sortedSequences)
+    }
+    start = partition_end + 1
+    #Great, found the start and end indexes. Now actually form the partitions from them.
+    partitions[[i]] = sortedSequences[partition_start:partition_end]
+    
+    print(paste(" i = ", i, " start = ", partition_start, " end = ", partition_end))
+  }
+  
+  return(partitions)
+}
+
+
+#Put all the different partitions together
+combine_partitions_theta_freq_sequences <-function(parts_theta_frequent_sequences)
+{
+  library(purrr)
+  
+  
+  list_theta_frequent_return = list()
+  list_theta_frequent_return[[1]] = flatten(parts_theta_frequent_sequences[1, ])
+  list_theta_frequent_return[[2]] = flatten(parts_theta_frequent_sequences[2, ])
+  list_theta_frequent_return[[3]] = flatten(parts_theta_frequent_sequences[3, ])
+  
+  
+  return(list_theta_frequent_return)
+}
+
+
+
+
+
 
 displaySymbolsPerState <- function(HMMTrained)
 {
@@ -252,7 +305,7 @@ sortSequencesWithIDs <- function(sequences){
   for(i in 1:length(unique(sequences$SequenceID)))
   {
     sequenceId = unique(sequences$SequenceID)[[i]]
-      
+    
     #Take all the actions of the current sequence
     sequencesLists[[i]]<-sequences[sequences$SequenceID==sequenceId,]
     sequencesLists1[[i]]<-sapply(sequencesLists[[i]]$sample,as.character)
@@ -281,7 +334,7 @@ sortSequencesWithIDs <- function(sequences){
   orderedSequences<-list()
   orderedIDs<-list()
   
-
+  
   for(i in 1:nrow(myDataFrameS))
   {
     orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
@@ -341,7 +394,10 @@ computePrefixFrequency <- function(sortedSequences, i, OHat, t){
 
 #Generate theta frequent sequences and their frequencies. It calls computePrefixFrequency().
 #Input: list of two lists: the ordered sequences list and the respective IDs list
-#Output: a list with two lists, so in a form of matrix:  list 1: A list with the frequency of all theta-frequent sequences, list 2: A list with all theta-frequent sequences
+#Output: a list with two lists, so in a form of matrix:  
+#list 1: A list with of theta-frequent sequences found
+#list 2: A list with the frequency of the theta-frequent sequence
+#list 3(actually not even necessary): A list with the ORIGINAL sequence in the sortedSequence to that the frequent sequences correspond
 getThetaFrequentSequences <- function(sortedSequences,theta){
   numberOfSequences <- length(sortedSequences)  
   MinLengthSave = 2
@@ -357,7 +413,8 @@ getThetaFrequentSequences <- function(sortedSequences,theta){
   
   #i is the index for the overall list of vectors, so of the sequence. NOT ANYMORE AS NOT ALL THE SEQUENCE IDs ARE NOW IN THE SAMPLE.
   #ERROR: for goes to numberOfSequences - 1 (it was +1) AND OHat IS COMPUTED ON Tc NOT IN Tc
-  for (i in 1:(numberOfSequences-1)){
+  for (i in 1:(numberOfSequences-1))
+    {
     #Current Prefix Length
     Tc = 0
     #j is the index within the vector. 
@@ -710,7 +767,7 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
 }
 
 
-sortSequencesByInterstingness <- function(interestingSequences){
+sortSequencesByInterestingness <- function(interestingSequences){
   r<-order(interestingSequences[[3]])
   newInterestingConditionTypes<-interestingSequences[[1]][r]
   newInterestingSequences<-interestingSequences[[2]][r]

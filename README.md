@@ -10,6 +10,8 @@ The present repository contains R scripts to generate HMMs interactively (IIHMM)
 - "hmm"
 - "stringr"
 - "parallel"
+-  "purrr"
+
 Make sure you install these packages in your R environment before running the scripts
 
 Also set the following global variables:
