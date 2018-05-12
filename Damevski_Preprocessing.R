@@ -1,12 +1,14 @@
-DATA_PATH = "Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
 
-#Print an update every 2000 messages processes
+#Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 FREQUENCY_PRINT = 5000
 
 THRESHOLD_RARE_MSG = 0.03
+
+#Also overall amount of cores used (virtual + physical)
 
 
 
@@ -59,7 +61,7 @@ load_marked_sequences <- function()
   indexes = find_indices_for_partitions(partitions)
   
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
-  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = 8) 
+  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
   
   #Now merge the different partitions
   sequences_marked = combine_sequences_marked(sequences_marked_split)
@@ -88,7 +90,7 @@ combine_sequences_marked <- function(sequences_marked_split)
   list_data_frames = list()
   
   #combine the resulting data frames into a list
-  for(i in ncol(sequences_marked_split))
+  for(i in 1:ncol(sequences_marked_split))
   {
     data_frame_cur = as.data.frame(sequences_marked_split[, i])
     list_data_frames[[i]] = data_frame_cur
