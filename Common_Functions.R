@@ -75,7 +75,6 @@ combine_partitions_interesting_sequences <-function(interestingSequencesParts)
 
 
 
-
 displaySymbolsPerState <- function(HMMTrained)
 {
   #for all states
@@ -318,13 +317,8 @@ sortSequencesWithIDs <- function(sequences){
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Sorting sequences and IDs")	
   #create three lists from sequences: one global, one for seqeunces and one for sequence'IDs
-  sequencesListsOld<-list()
-  sequencesLists1Old<-list()
-  sequencesLists2Old<-list()
-  
   
   print(length(unique(sequences$SequenceID)))
-  
   
   #Let's make it more efficient, step by step
   
@@ -520,8 +514,6 @@ generateHMMSequencesIterationParallel <- function(HMMTrained, sequence, forwardP
   return(results_list)
   
 }  
-
-
 
 
 
@@ -895,7 +887,10 @@ generateProbableSequences<-function(HMMTrained, theta){
   symbols<-as.vector(HMMTrained$Symbols)
   M <- length(symbols)
   print(M)
-  for (j in 1:M) {
+  inputSymbolsIndexes = c(1:M)
+  
+  sapply(inputSymbolsIndexes, function(j)
+  {
     print(j)
     # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
     init <- symbols[j]
@@ -903,8 +898,7 @@ generateProbableSequences<-function(HMMTrained, theta){
     forwardProb = forward(HMMTrained, sequence)
     # this is the inductive case
     generateHMMSequencesIteration(HMMTrained, init, forwardProb, theta, symbols)
-  }
-  
+  })
 }
 
 
@@ -921,14 +915,13 @@ generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, the
     thetaProbableProbabilities[[index]] <<- forwardProbSum
     index <<- index + 1
     
-    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
-    for (i in 1:length(symbols)) {
+    indexes_symbols = 1:length(symbols)
+    sapply(indexes_symbols, function(i){
       sequenceIterative <- c(sequence, symbols[i])
+      library("HMM")
       forwardProb = forward(HMMTrained, sequenceIterative)
-      #this was the mistake. We need just sum up the last colum ("temp") each time
-      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
       generateHMMSequencesIteration(HMMTrained, sequenceIterative, forwardProb, theta, symbols)
-    }    
+    })
   }
 } 
 
