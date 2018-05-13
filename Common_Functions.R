@@ -32,6 +32,44 @@ find_partitions_for_sorted_sequences <- function(sortedSequences, amount_workers
 }
 
 
+#Input: the set of sortedSequences
+#       the amount of workers onto that the work is gonna be parallelized
+#Output: X partitions, where sortedSequences is divided into X chunks. X = amount_workers passed as input.
+find_partitions_for_sequences<- function(sequences, amount_workers)
+{
+  #didn't find any automatic way, so let's do it by hand..
+  
+  #Contains list of all the different data frames.
+  partitions = list() #Can we have a list of data frames? Yes
+  partition_size = ceiling(length(sequences$sample) / amount_workers)
+  
+  start = 1
+  
+  for(i in 1:amount_workers)
+  {
+    partition_start = start
+    
+    partition_end = i * partition_size
+    #if going slightly beyond the actual length (because of ceiling function), then cut it
+    if(partition_end >= length(sequences$sample))
+    {
+      partition_end = length(sequences$sample)
+    }
+    start = partition_end + 1
+    #Great, found the start and end indexes. Now actually form the partitions from them.
+    partitions[[i]] = data.frame(sequences$sample[partition_start:partition_end], sequences$timestamp[partition_start:partition_end]
+                                 ,sequences$developer[partition_start:partition_end], sequences$SequenceID[partition_start:partition_end]
+                                )
+    colnames(partitions[[i]]) <- c("sample","timestamp", "developer", "SequenceID")
+    
+    print(paste(" i = ", i, " start = ", partition_start, " end = ", partition_end))
+  }
+  
+  return(partitions)
+}
+
+
+
 #Put all the different partitions together
 combine_partitions_sequences <-function(parts_sequences)
 {
@@ -65,7 +103,6 @@ combine_partitions_interesting_sequences <-function(interestingSequencesParts)
   }
   
   interesting_sequences = combine_partitions_sequences(interestingSequencesParts)
-  
   
   return(interesting_sequences)
 }
@@ -319,14 +356,25 @@ sortSequencesWithIDs <- function(sequences){
   #create three lists from sequences: one global, one for seqeunces and one for sequence'IDs
   
   print(length(unique(sequences$SequenceID)))
+
+  #Fine, let's process the sequences in parallel. Fatto 30, facciam 31!
+  #list_partitions_sequences = list()
   
-  #Let's make it more efficient, step by step
+  library(purrr)
+  #list_partitions_sequences = find_partitions_for_sequences(sequences, amount_workers)
+  #Doesn't fit in cache --> Causes too many cache faults. Parallel version with only 1 thread actually performs better!
   
-  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ])
-  #for every element in the sequencesList, get the corresponding sample as a characer
-  sequencesLists1 = lapply(sequencesLists, function(sequenceListElement) as.character(sequenceListElement$sample) )
-  #And get the sequence ID as well
-  sequencesLists2 = lapply(sequencesLists, function(sequenceListElement) sequenceListElement$SequenceID  )
+  parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
+  
+  sequencesLists = flatten(parts_lists[1, ])
+  sequencesLists1 = flatten(parts_lists[2, ])
+  sequencesLists2 = flatten(parts_lists[3, ])
+  
+  #good old sequential version
+  #allListsSequences = generateListsforSequences(sequences)
+  #sequencesListsSeq = allListsSequences[[1]]
+  #sequencesLists1Seq = allListsSequences[[2]]
+  #sequencesLists2Seq = allListsSequences[[3]]
   
   #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. 
   #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
@@ -360,6 +408,18 @@ sortSequencesWithIDs <- function(sequences){
   
   return (list(orderedSequences, orderedIDs)) 
 }
+
+generateListsforSequences <- function(sequences)
+{
+  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ])
+  #for every element in the sequencesList, get the corresponding sample as a characer
+  sequencesLists1 = lapply(sequencesLists, function(sequenceListElement) as.character(sequenceListElement$sample) )
+  #And get the sequence ID as well
+  sequencesLists2 = lapply(sequencesLists, function(sequenceListElement) sequenceListElement$SequenceID  )
+  
+  return (list(sequencesLists, sequencesLists1, sequencesLists2))
+}
+
 
 #Compute the frequency of a prefix "OHat". "t" is the length of OHat, i is index of the sequence containing OHat, and sortedSequences is the list of two lists: sorted sequences and their IDs list. Used only in generateThetaFrequentSequences()
 computePrefixFrequency <- function(sortedSequences, i, OHat, t){
@@ -588,6 +648,10 @@ computeSequenceInterestingness <- function(sequence, thetaFrequentSequences, the
   }
 }
 
+chunk2 <- function(x,n) {
+  split(x, cut(seq_along(x), n, labels = FALSE)) 
+}
+
 
 
 
@@ -605,7 +669,6 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
   
   #Partition ThetaSequencesUnion and process each chunk separately
   
-  chunk2 <- function(x,n) split(x, cut(seq_along(x), n, labels = FALSE)) 
   
   partitions_theta_union = chunk2(thetaSequencesUnion, amount_workers)
   list_partitions_theta_union = list()
@@ -786,83 +849,6 @@ compareModelLogLikelihoodAtIteration<-function(logLikCur, logLikNext){
 
 
 
-
-
-#Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
-generateProbableSequencesNewParallel<-function(HMMTrained, theta, amount_workers){
-  symbols<-as.vector(HMMTrained$Symbols)
-  M <- length(symbols)
-  print(M)
-  sequencesReturn = list()
-  
-  
-
-  for (j in 1:M) 
-  {
-    print(j)
-    # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
-    init <- symbols[j]
-    sequence <- c(init, symbols[1])
-    forwardProb = forward(HMMTrained, sequence)
-    # this is the inductive case thetaProbableSequences[[j]] =
-     thetaProbableSequence = generateHMMSequencesIterationNewParallel(HMMTrained, init, forwardProb, theta, symbols,  list())
-     
-     sequencesReturn[[length(sequencesReturn) + 1]] =  thetaProbableSequence
-     
-     print(paste("OUTPUT" , thetaProbableSequence))
-  }
-  
-  #unlist possibly?
-  return(sequencesReturn)
-}
-
-
-#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
-generateHMMSequencesIterationNewParallel <- function(HMMTrained, sequence, forwardProb, theta, symbols,  thetaProbableSequences)
-{	
-  
-  #print(sequence)
-  
-  if(length(sequence)==1)
-  {
-    forwardProbSum <- sum(exp(forwardProb[, 1]))
-  }
-  else
-  {
-    forwardProbSum <- sum(exp(forwardProb[, length(sequence)]))
-  }
-  if(forwardProbSum > theta)
-  {
-    if(length(sequence) > 0)
-    {
-      #Need a way to concatenate all the difference sequences and pass them over.
-      #Somehow, need to save this
-      sequences_list[length(sequences_list)] = sequence
-      
-    }
-    #saved as global variables
-    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta.
-    #When this happens a new combination of 	symbols starts: see the output 	
-    foreach (i=1:length(symbols)) %dopar%
-    {
-      sequenceIterative <- c(sequence, symbols[i])
-      forwardProb = forward(HMMTrained, sequenceIterative)
-      #this was the mistake. We need just sum up the last colum ("temp") each time
-      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
-      generateHMMSequencesIterationNewParallel(HMMTrained, sequenceIterative, forwardProb, theta, symbols, thetaProbableSequences)
-       #thetaProbableSequeEnces[[length(thetaProbableSequences) + 1]] =
-    } 
-    
-    #thetaProbableSequences[[length(thetaProbableSequences) + 1]] = sequence
-    #print(paste("Here, it is ", sequence))
-  }
-  
-}  
-
-
-
-
-
 #DANIELE: keep the sequential code here as back, just in case
 getThetaProbableSequences<-function(HMMTrained, theta){
   #Theta-Probable sequences as global variables
@@ -927,45 +913,6 @@ generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, the
 
 
 ##DANIELE DESPERATION:
-
-
-
-#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
-generateHMMSequencesIterationParallel <- function(HMMTrained, sequence, forwardProb, theta, symbols, index) 
-{
-  results_list = list()
-  
-  if(length(sequence)==1){
-    forwardProbSum <- sum(exp(forwardProb[, 1]))
-  }else{forwardProbSum <- sum(exp(forwardProb[, length(sequence)]))}
-  
-  if(forwardProbSum > theta){
-    #saved as global variables
-    #Sys.sleep(0.01)
-    #print(sequence)
-    #thetaProbableSequences[[length(thetaProbableSequences)+1]] <<- sequence
-    #print(sequence)
-    #print(thetaProbableSequences)
-    #thetaProbableProbabilities[[length(thetaProbableProbabilities)+1]] <<- forwardProbSum
-    #index = index + 1
-    results_list[[length(results_list) + 1 ]] = sequence
-    
-    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
-    for (i in 1:length(symbols)) 
-    {
-      sequenceIterative <- c(sequence, symbols[i])
-      forwardProb = forward(HMMTrained, sequenceIterative)
-      #this was the mistake. We need just sum up the last colum ("temp") each time
-      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
-      #browser()
-      results_list = append(results_list, generateHMMSequencesIterationParallel(HMMTrained, sequenceIterative, forwardProb, theta, symbols, index))
-      print(results_list)
-    }    
-  }
-  
-  return(results_list)
-  
-}  
 
 
 
@@ -1081,8 +1028,3 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
   }
   return (list(conditionTypes, interestingSequences, interestingnessValues))
 }
-
-
-
-
-

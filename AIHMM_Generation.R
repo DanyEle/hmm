@@ -149,7 +149,6 @@ loopOverSequenceSet <- function(pathToData, k){
   		  intersection<-as.vector(sapply(sortedInterestingSequences[[2]],function(x)intersect(unlist(x),names(allDataEP[which(!allDataEP==0)]))))
   		  q<-unlist(lapply(intersection,`all.equal`,character(0)))		
   		  
-  		  
   		  toMoveSymbols <- selectSymbolsTopKInterestingSequences(intersection, q, k)
   
       	print(toMoveSymbols)   
