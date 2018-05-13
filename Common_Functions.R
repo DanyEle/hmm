@@ -361,7 +361,7 @@ sortSequencesWithIDs <- function(sequences){
   #list_partitions_sequences = list()
   
   library(purrr)
-  #list_partitions_sequences = find_partitions_for_sequences(sequences, amount_workers)
+  list_partitions_sequences = find_partitions_for_sequences(sequences, amount_workers)
   #Doesn't fit in cache --> Causes too many cache faults. Parallel version with only 1 thread actually performs better!
   
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)

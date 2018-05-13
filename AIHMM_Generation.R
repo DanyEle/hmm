@@ -65,7 +65,8 @@ loopOverSequenceSet <- function(pathToData, k){
       #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
       #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. Doesn't take too long actually?
       ##sortedSequencesIDs <<- sortedSequencesIDs
-      sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs)
+      #NOT PARALLEL, but just split in N partitions to reduce access time to huge dataframe.
+      sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs, amount_workers)
       sortedSequences <<- sortedSequencesIDs[[1]]
       #sortedSequencesBeforeFiltering <- sortedSequences
       #EXPERIMENTAL FUNCTIONS. Not really necessary.
