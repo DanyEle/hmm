@@ -12,7 +12,7 @@ MARK_SEQUENCE_IDS = FALSE
 #TRUE = For Damevski's dataset or other datasets, in case we may need to carry out some pre-processing in other functions / files
 LOAD_CUSTOM_SEQUENCES = TRUE
 
-AMOUNT_WORKERS = 8
+AMOUNT_WORKERS = 256
 
 
 
@@ -21,8 +21,6 @@ AMOUNT_WORKERS = 8
 FILTER_SU = FALSE
 #Filter all sequences containing the top 50% most frequent symbols contained in all sequences containing SU
 FILTER_MOST_FREQUENT_SU  = FALSE
-
-
 
 
 main <- function()
