@@ -6,7 +6,6 @@ find_partitions_for_sorted_sequences <- function(sortedSequences, amount_workers
 {
   #didn't find any automatic way, so let's do it by hand..
   
-  
   partitions = list()
   partition_size = ceiling(length(sortedSequences) / amount_workers)
   
@@ -34,19 +33,43 @@ find_partitions_for_sorted_sequences <- function(sortedSequences, amount_workers
 
 
 #Put all the different partitions together
-combine_partitions_theta_freq_sequences <-function(parts_theta_frequent_sequences)
+combine_partitions_sequences <-function(parts_sequences)
 {
   library(purrr)
   
   
-  list_theta_frequent_return = list()
-  list_theta_frequent_return[[1]] = flatten(parts_theta_frequent_sequences[1, ])
-  list_theta_frequent_return[[2]] = flatten(parts_theta_frequent_sequences[2, ])
-  list_theta_frequent_return[[3]] = flatten(parts_theta_frequent_sequences[3, ])
+  list_return = list()
+  list_return[[1]] = flatten(parts_sequences[1, ])
+  list_return[[2]] = flatten(parts_sequences[2, ])
+  list_return[[3]] = flatten(parts_sequences[3, ])
   
   
-  return(list_theta_frequent_return)
+  return(list_return)
 }
+
+
+#Put all the different partitions together
+combine_partitions_interesting_sequences <-function(interestingSequencesParts)
+{
+  library(purrr)
+
+  #Firstly normalize and remove weird content  
+  for(i in 1:ncol(interestingSequencesParts))
+  {
+    #Check if the current one has invalid size (i.e: it does not own any interesting sequences)
+    #Then, "normalize it"
+    if(length(interestingSequencesParts[, i][[1]]) == 0)
+    {
+      interestingSequencesParts[, i][[2]] = list()
+    }
+  }
+  
+  interesting_sequences = combine_partitions_sequences(interestingSequencesParts)
+  
+  
+  return(interesting_sequences)
+}
+
 
 
 
@@ -334,8 +357,7 @@ sortSequencesWithIDs <- function(sequences){
   orderedSequences<-list()
   orderedIDs<-list()
   
-  
-  for(i in 1:nrow(myDataFrameS))
+  for (i in 1:nrow(myDataFrameS))
   {
     orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
     orderedIDs[[i]]<-newDataFrameID[i,][-which(is.na(newDataFrameID[i,]))]
@@ -463,93 +485,414 @@ getThetaFrequentSequences <- function(sortedSequences,theta){
 ############### Algorithm 3. Generate Probable sequences ###################
 
 
-getThetaProbableSequencesParallel<-function(HMMTrained, theta){
-  #Theta-Probable sequences as global variables
-  symbols<-as.vector(HMMTrained$Symbols)
-  column_names = c(1:length(symbols))
+#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
+generateHMMSequencesIterationParallel <- function(HMMTrained, sequence, forwardProb, theta, symbols, index) 
+{
+  results_list = list()
   
-  thetaProbableProbabilities <<- list()
-  #thetaProbableSequences <<- data.frame(matrix(ncol = length(symbols)))
+  if(length(sequence)==1){
+    forwardProbSum <- sum(exp(forwardProb[, 1]))
+  }else{forwardProbSum <- sum(exp(forwardProb[, length(sequence)]))}
+  
+  if(forwardProbSum > theta){
+    #saved as global variables
+    #Sys.sleep(0.01)
+    #print(sequence)
+    #thetaProbableSequences[[length(thetaProbableSequences)+1]] <<- sequence
+    #print(sequence)
+    #print(thetaProbableSequences)
+    #thetaProbableProbabilities[[length(thetaProbableProbabilities)+1]] <<- forwardProbSum
+    #index = index + 1
+    results_list[[length(results_list) + 1 ]] = sequence
+    
+    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
+    for (i in 1:length(symbols)) 
+    {
+      sequenceIterative <- c(sequence, symbols[i])
+      forwardProb = forward(HMMTrained, sequenceIterative)
+      #this was the mistake. We need just sum up the last colum ("temp") each time
+      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
+      #browser()
+      results_list = append(results_list, generateHMMSequencesIterationParallel(HMMTrained, sequenceIterative, forwardProb, theta, symbols, index))
+      print(results_list)
+    }    
+  }
+  
+  return(results_list)
+  
+}  
 
-  #result will need to be put back into a list though!
+
+
+
+
+#
+#VERIFIED. REMOVED "Observation" and "sortedSequences" as parameters
+computeSequenceInterestingness <- function(sequence, thetaFrequentSequences, thetaProbableSequences, HMMTrained, thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta){
+  #now, we need to distinguish among 3 cases:
+  IndexDataNotModel = Position(function(x) identical(x, sequence), thetaSequencesSetDiffData, nomatch = 0)
+  IndexIntersection = Position(function(x) identical(x, sequence), thetaSequencesIntersection, nomatch = 0)
+  IndexModelNotData = Position(function(x) identical(x, sequence), thetaSequencesSetDiffModel, nomatch = 0)
+  
+  #9a. It's in theta-frequent, but not in the model. Hence, we need to compute the probability of the sequence.
+  if (IndexDataNotModel > 0){
+    #Frequency of the considered sequence. As "Position" returns the first position there is no need to remove duplicates
+    FrequencyIndex = Position(function(x) identical(x, sequence), thetaFrequentSequences[[1]], nomatch = 0)
+    Frequency = thetaFrequentSequences[[2]][[FrequencyIndex]]
+    
+    #Compute the forward probability
+    if(length(sequence)==1){
+      # use c(sequence,sequence)as a trick to avoid subscripts out of bound. then take the first column only
+      forwardProb = forward(HMMTrained, c(sequence,sequence))		
+    }else{
+      forwardProb = forward(HMMTrained, sequence)		
+    }
+    Probability <- sum(exp(forwardProb[, length(sequence)]))
+    
+    #Probability = computeSequenceProbability(HMMTrained, sequence, HMMTrained$States)
+    
+    #Compute interestingness
+    Interestingness = Frequency - Probability
+    
+    #check theta 
+    if(Interestingness >= theta){
+      #1 stand for case 9a.
+      return (c(1, Interestingness))
+    }
+    else
+    {
+      return(0)
+    }
+  }
+  #9b. It's both in the data(theta-frequent) and in the model (theta-probable)
+  else if(IndexIntersection > 0){
+    #Frequency of the considered observation. Take it from the existing vector.
+    FrequencyIndex = Position(function(x) identical(x, sequence), thetaFrequentSequences[[1]], nomatch = 0)
+    Frequency = thetaFrequentSequences[[2]][[FrequencyIndex]]
+    
+    #Probability is already calculated in theta-probable sequences in this case. no need to do it again.
+    IndexInThetaProbable = Position(function(x) identical(x, sequence), thetaProbableSequences[[1]], nomatch = 0)
+    Probability = thetaProbableSequences[[2]][[IndexInThetaProbable]]
+    #finally, we got the score for this sequence.
+    Interestingness = Frequency - Probability
+    
+    if(Interestingness >= theta){
+      #2 stand for case 9b.
+      return (c(2, Interestingness))
+    }
+    else
+    {
+      return(0)
+    }
+  }
+  #9c. It's in the model (Theta-probable), but not in the data(theta-frequent)
+  #well supported by the model, but dooes not appear in data. 
+  else if(IndexModelNotData > 0){
+    
+    IndexInThetaProbable = Position(function(x) identical(x, sequence), thetaProbableSequences[[1]], nomatch = 0)
+    Probability = thetaProbableSequences[[2]][[IndexInThetaProbable]]
+    Interestingness =  - Probability
+    #2 stand for case 9b. uninteresting sequences
+    return (c(3, Interestingness))
+  }
+}
+
+
+
+
+#Input: ThetaProbableValuesnoDups: List containing non-duplicated theta-probable sequences[[2]] and their corresponding probability[[1]]
+#       ThetaFrequentValuesnoDups: List containing non-duplicated theta-frequent sequences[[2]] and their corresponding frequency[[1]]
+#Output: the score for all input sequences
+computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, thetaProbableSequences, HMMTrained, theta, amount_workers){	
+  #stores the case from that the score was computed.
+  conditionTypes = vector()
+  #stores sequences whose score has been computed
+  interestingSequences = list()
+  #stores the scores for the sequences.
+  interestingnessValues = vector()
+  h = 1
+  
+  #Partition ThetaSequencesUnion and process each chunk separately
+  
+  chunk2 <- function(x,n) split(x, cut(seq_along(x), n, labels = FALSE)) 
+  
+  partitions_theta_union = chunk2(thetaSequencesUnion, amount_workers)
+  list_partitions_theta_union = list()
+  
+  for(i in 1:length(partitions_theta_union))
+  {
+    list_partitions_theta_union[[i]] = partitions_theta_union[[i]]
+  }
+  
+  # set operations
+  thetaSequencesUnion = union(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
+  #Theta-Frequent - Theta-Probable
+  thetaSequencesSetDiffData = setdiff(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
+  #Theta-Probable - Theta-Frequent
+  thetaSequencesSetDiffModel = setdiff(thetaProbableSequences[[1]], thetaFrequentSequences[[1]])
+  #Theta-Probable intersectin with Theta-Frequent (viceversa holds too)
+  thetaSequencesIntersection = intersect(thetaProbableSequences[[1]], thetaFrequentSequences[[1]])
+  
+  
+  partitions_interestingness = mcmapply(compute_interestingness_per_partition, partition_theta_union = list_partitions_theta_union, 
+                                       thetaFrequentSequences=replicate(amount_workers, thetaFrequentSequences, FALSE), 
+                                        thetaProbableSequences=replicate(amount_workers, thetaProbableSequences, FALSE),thetaSequencesSetDiffData=replicate(amount_workers ,thetaSequencesSetDiffData, FALSE),
+                                       thetaSequencesSetDiffModel=replicate(amount_workers, thetaSequencesSetDiffModel, FALSE),
+                                       thetaSequencesIntersection=replicate(amount_workers, thetaSequencesIntersection, FALSE), theta=theta, mc.cores = amount_workers)
+  
+  return(partitions_interestingness)
+  
+  #Fine, we have our partitions setup now. Pass the partitions to the function which will compute the interestingness
+}
+
+compute_interestingness_per_partition <- function(partition_theta_union, thetaFrequentSequences, thetaProbableSequences,
+                                                  thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta)
+{
+  print(length(partition_theta_union))
+  #loop through all sequences that belong either to Theta-Frequent or to Theta-Probable.
+  for(i in 1:length(partition_theta_union)){
+    sequence = partition_theta_union[[i]]
+    conditionInterestingness = computeSequenceInterestingness(sequence, thetaFrequentSequences, thetaProbableSequences, HMMTrained, thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta)   
+    #number corresponding to the condition met.
+    conditionType = conditionInterestingness[1]
+    #interestingness of sequence
+    interestingness = conditionInterestingness[2]    
+    #non-intersting seuences are not returned
+    if(!conditionType %in% c(0,3)){
+      conditionTypes[h] = conditionType
+      interestingSequences[[h]] = sequence
+      interestingnessValues[h] = interestingness
+      h = h + 1
+    }
+  }
+  return (list(conditionTypes, interestingSequences, interestingnessValues))
+}
+
+
+sortSequencesByInterestingness <- function(interestingSequences){
+  r<-order(interestingSequences[[3]])
+  newInterestingConditionTypes<-interestingSequences[[1]][r]
+  newInterestingSequences<-interestingSequences[[2]][r]
+  newInterestingInterestingness<-interestingSequences[[3]][r]
+  return (list(newInterestingConditionTypes, newInterestingSequences, newInterestingInterestingness))
+}
+
+selectSymbolsTopKInterestingSequences <- function(intersection, q, k)
+{
+  toMoveSymbolsUnion <- c()   
+  
+  for(i in 1:k)
+  {
+    toMoveSymbolsCur <- unlist(intersection[which(!q==TRUE)[[i]]])
+    toMoveSymbolsUnion <- union(toMoveSymbolsUnion, toMoveSymbolsCur)
+  }
+  
+  return(toMoveSymbolsUnion)
+}
+
+
+#TO RUN. Update emission probabilities moving symbols in a new state
+updateEmissionMatrix<-function(newState, toMoveSymbols, HMMTrained){
+  symbols<-as.vector(HMMTrained$Symbols)
+  states<-HMMTrained$States
+  toMoveSymbols<-as.vector(unlist(toMoveSymbols))
+  newEmissionMatrix<-matrix(ncol=length(symbols), nrow=length(states)+1, dimnames=list(c(states,newState),symbols))
+  notMovedSymbols<-as.vector(setdiff(symbols, toMoveSymbols))
+  t<-runif(length(toMoveSymbols))
+  r<-t/sum(t)  
+  #set to zero emission values for toMoveSymbols in ALL DATA (sink) state
+  newEmissionMatrix[1, toMoveSymbols]<-0  
+  #define emission values for toMoveSymbols in the newState (last row)
+  newEmissionMatrix[nrow(newEmissionMatrix), toMoveSymbols]<-r
+  #set to zero all the other emission values
+  newEmissionMatrix[nrow(newEmissionMatrix),notMovedSymbols]<-0
+  #normalise emission values for the not moved symbols in the ALL DATA (sink) state
+  newEmissionMatrix[1,notMovedSymbols]<-HMMTrained$emissionProb[1,notMovedSymbols]/sum(HMMTrained$emissionProb[1, notMovedSymbols])
+  #assign the values to the new emission matrix
+  if(!nrow(HMMTrained$emissionProb)==1){
+    newEmissionMatrix[2:(nrow(newEmissionMatrix)-1),symbols]<-HMMTrained$emissionProb[2:(nrow(newEmissionMatrix)-1),symbols]}else{   
+    } 
+  return(newEmissionMatrix)
+}
+
+newStateHMMTrainingConstrained <-function(newState, toMoveSymbols, HMMTrained, sortedSequences, sequences, LogLikUnconst){
+  #Adding a new state 
+  #build the emission matrix to move the new symbols from the sink state (ALL DATA) to the new state
+  print("New state in constrained HMM:")
+  print(newState)
+  print("Symbols to move in constrained HMM")
+  print(toMoveSymbols)
+  newEmissionProb<-updateEmissionMatrix(newState, toMoveSymbols, HMMTrained)  
+  #initialisation of a new HMM with the augmented set of states and the constrained emission matrix
+  states = HMMTrained$States  
+  symbols = HMMTrained$Symbols
+  updatedInitHMM<-initHMM(c(states,newState), symbols,  emissionProbs= newEmissionProb)
+  print("States:")
+  print(c(states,newState))
+  #optimise the HMM model
+  constrainedTrainedHMM <-trainBaumWelch(updatedInitHMM, as.vector(sequences)) 
+  #compute the loglikelihood and verify it is greter or equal to the unconstrained model with the same number of states
+  modelPerformance = computeModelLogLikelihood(sortedSequences, sequences, constrainedTrainedHMM, LogLikUnconst, HMMTrained)
+  
+  # modelPerformance = computeModelLogLikelihood(sortedSequences, sequences, symbols, constrainedTrainedHMM)
+  nrStates<- length(c(states, newState))
+  return(list(constrainedTrainedHMM, toMoveSymbols, nrStates, modelPerformance[[3]], modelPerformance[[1]]))
+}
+
+#requires package "hmm.discnp"
+#To be used in case the unconstrained emission matrix is build from scratch. Loglikhood does not change with no states: run it once for all
+computeModelLogLikelihood <- function(sortedSequences, sequences, constrainedTrainedHMM, LogLikUnconst, HMMTrained){
+  continue<-FALSE
+  library("hmm.discnp")
+  
+  #data of constrained model
+  EmissMatrixConst = constrainedTrainedHMM$emissionProbs
+  TransMatrixConst = constrainedTrainedHMM$transProbs
+  StartProbsConst = constrainedTrainedHMM$startProbs
+  symbols<-constrainedTrainedHMM$Symbols
+  states<-constrainedTrainedHMM$States
+  #LogLikHmm requires list of sequences
+  LogLikConst = logLikHmm(sortedSequences, list(Rho=t(EmissMatrixConst), tpm = TransMatrixConst, ispd = StartProbsConst ) )
+  
+  print(LogLikConst)
+  print(LogLikUnconst)
+  
+  # the constrained model must have loglikelihood >= than the one of the unconstrained model 
+  if(LogLikConst >= LogLikUnconst){
+    continue=TRUE
+    print("The Log-Likelihood is no-worse than the unconstrained model") 
+    print(constrainedTrainedHMM)
+  }else{
+    #TODO: print HMM.
+    print("Stopping process. The log-likelihood is worse than the unconstrained model. The previous model was the best one so far.Printing it here:")
+    print(HMMTrained)
+    continue=FALSE
+    #stop("Stopping process. The log-likelihood is worse than the unconstrained model.")    
+  }
+  return(list(continue, constrainedTrainedHMM, LogLikConst)) 
+}
+
+#Compare log-likelihood at current iteration with log-likelihood in next iteration
+compareModelLogLikelihoodAtIteration<-function(logLikCur, logLikNext){
+  continue<-FALSE
+  # the next model must have loglikelihood > than the one of the current model 
+  if(logLikNext > logLikCur)
+  {
+    continue=TRUE
+    print("log likelihood next HMM, more states ")
+    print(logLikNext)
+    print("log likelihood current HMM")
+    print(logLikCur)
+  }
+  print("log likelihood next HMM, more states ")
+  print(logLikNext)
+  print("log likelihood current HMM")
+  print(logLikCur)
+  
+  return(continue)
+
+}
+
+
+
+
+
+#Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
+generateProbableSequencesNewParallel<-function(HMMTrained, theta, amount_workers){
+  symbols<-as.vector(HMMTrained$Symbols)
+  M <- length(symbols)
+  print(M)
+  sequencesReturn = list()
+  
+  
+
+  for (j in 1:M) 
+  {
+    print(j)
+    # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
+    init <- symbols[j]
+    sequence <- c(init, symbols[1])
+    forwardProb = forward(HMMTrained, sequence)
+    # this is the inductive case thetaProbableSequences[[j]] =
+     thetaProbableSequence = generateHMMSequencesIterationNewParallel(HMMTrained, init, forwardProb, theta, symbols,  list())
+     
+     sequencesReturn[[length(sequencesReturn) + 1]] =  thetaProbableSequence
+     
+     print(paste("OUTPUT" , thetaProbableSequence))
+  }
+  
+  #unlist possibly?
+  return(sequencesReturn)
+}
+
+
+#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
+generateHMMSequencesIterationNewParallel <- function(HMMTrained, sequence, forwardProb, theta, symbols,  thetaProbableSequences)
+{	
+  
+  #print(sequence)
+  
+  if(length(sequence)==1)
+  {
+    forwardProbSum <- sum(exp(forwardProb[, 1]))
+  }
+  else
+  {
+    forwardProbSum <- sum(exp(forwardProb[, length(sequence)]))
+  }
+  if(forwardProbSum > theta)
+  {
+    if(length(sequence) > 0)
+    {
+      #Need a way to concatenate all the difference sequences and pass them over.
+      #Somehow, need to save this
+      sequences_list[length(sequences_list)] = sequence
+      
+    }
+    #saved as global variables
+    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta.
+    #When this happens a new combination of 	symbols starts: see the output 	
+    foreach (i=1:length(symbols)) %dopar%
+    {
+      sequenceIterative <- c(sequence, symbols[i])
+      forwardProb = forward(HMMTrained, sequenceIterative)
+      #this was the mistake. We need just sum up the last colum ("temp") each time
+      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
+      generateHMMSequencesIterationNewParallel(HMMTrained, sequenceIterative, forwardProb, theta, symbols, thetaProbableSequences)
+       #thetaProbableSequeEnces[[length(thetaProbableSequences) + 1]] =
+    } 
+    
+    #thetaProbableSequences[[length(thetaProbableSequences) + 1]] = sequence
+    #print(paste("Here, it is ", sequence))
+  }
+  
+}  
+
+
+
+
+
+#DANIELE: keep the sequential code here as back, just in case
+getThetaProbableSequences<-function(HMMTrained, theta){
+  #Theta-Probable sequences as global variables
+  thetaProbableProbabilities <<- list()
+  thetaProbableSequences <<- list()
+  
+  index <<- 1
   
   #initialize the index of the two global list variables ThetaProbableProbabilities, ThetaProbableSequences
   #populate the global list variables ThetaProbableProbabilities, ThetaProbableSequences.
   
   
-  thetaProbableSequences = generateProbableSequencesParallel(HMMTrained, theta)
+  generateProbableSequences(HMMTrained, theta)
   
   #put them together into a single list.
-  #thetaProbableValues = list(thetaProbableSequences, thetaProbableProbabilities)
-  return(thetaProbableProbabilities)
+  thetaProbableValues = list(thetaProbableSequences, thetaProbableProbabilities)
+  return(thetaProbableValues)
 }   
 
-
 #Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
-generateProbableSequencesParallel<-function(HMMTrained, theta){
-  symbols<-as.vector(HMMTrained$Symbols)
-  M <- length(symbols)
-  print(M)
-  
-  n = 10
-  partitions = identify_partitions_symbols(n, symbols)
-  indexes = c(1:length(partitions))
-  
-  HMMsTrained = create_HMMs(length(partitions), HMMTrained)
-  
-  
-  all_theta_probable_sequences = mcmapply(process_symbols_of_partition, HMMTrained = HMMsTrained, theta=theta, symbols_partition = partitions, index=indexes, mc.cores = 1) 
-  
-  #somehow, also need to combine the result
-  
-  return(all_theta_probable_sequences)
-}
-
-create_HMMs <- function(M, HMMTrained)
-{
-  output_list = list()
-  for(i in 1:M)
-  {
-    output_list[[i]] = HMMTrained
-  }
-  return(output_list)
-}
-
-#TEST: process_symbols_of_partition(HMMTrained, theta, partition, 1)
-
-process_symbols_of_partition <- function(HMMTrained,  theta, symbols_partition, index)
-{
-  symbols_partition = array(unlist(symbols_partition))
-
-  #print(theta)
-  #print(HMMTrained)
-  #print(symbols_partition)
-  #print(index)
-  
-  theta_probable_sequences_partition = list()
-  
-  for (j in 1:length(symbols_partition)) 
-  {
-    #Every worker gets a chuck of the symbols.
-    print(j)
-    # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
-    init <- symbols_partition[j]
-
-    #browser()
-    sequence <- c(init, symbols_partition[1])
-    
-
-    forwardProb = forward(HMMTrained, sequence)
-    # this is the inductive case
-    theta_probable_sequences_one_symbol = append(theta_probable_sequences_partition, generateHMMSequencesIteration(HMMTrained, init, forwardProb, theta, symbols_partition, index))
-  }
-  
-  return(theta_probable_sequences_partition)
-}
-
-#Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
-generateProbableSequences_sequential_no_global<-function(HMMTrained, theta){
-  all_theta_probable_sequences = list()
+generateProbableSequences<-function(HMMTrained, theta){
   symbols<-as.vector(HMMTrained$Symbols)
   M <- length(symbols)
   print(M)
@@ -557,60 +900,41 @@ generateProbableSequences_sequential_no_global<-function(HMMTrained, theta){
     print(j)
     # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
     init <- symbols[j]
-    print(init)
     sequence <- c(init, symbols[1])
-    #print(sequence)
-    Sys.sleep(2)
     forwardProb = forward(HMMTrained, sequence)
     # this is the inductive case
-    all_theta_probable_sequences = append(all_theta_probable_sequences, generateHMMSequencesIteration(HMMTrained, init, forwardProb, theta, symbols))
+    generateHMMSequencesIteration(HMMTrained, init, forwardProb, theta, symbols)
   }
-  
-  print(result)
   
 }
 
 
 
-#Input: M: size of the data structure to partition
-#       n: amount of workers that will process the work in parallel
-identify_partitions_symbols <- function(n, symbols)
-{
-  M = length(symbols)
-  partitions =  list() 
+#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
+generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, theta, symbols) {	
+  if(length(sequence)==1){
+    forwardProbSum <- sum(exp(forwardProb[, 1]))
+  }else{forwardProbSum <- sum(exp(forwardProb[, length(sequence)]))}
   
-  delta = round(M / n, digits=0)
-  
-  start = 1
-  end = delta
-  continue = TRUE
-  i = 0
-  while(i < n && continue == TRUE)
-  {
-    end = (delta * (i + 1)) + 1
+  if(forwardProbSum > theta){
+    #saved as global variables
+    thetaProbableSequences[[index]] <<- sequence
+    thetaProbableProbabilities[[index]] <<- forwardProbSum
+    index <<- index + 1
     
-    start = (delta * i)  + 2
-    if(i == 0)
-    {
-      start = 1
-    }
-    if(i == n - 1)
-    {
-      end = M
-      continue = FALSE
-    }
-    
-    i = i + 1
-    
-    print(i)
-    print(paste(start, end))
-    partitions[[i]] = as.list(symbols[start:end])
-    
+    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
+    for (i in 1:length(symbols)) {
+      sequenceIterative <- c(sequence, symbols[i])
+      forwardProb = forward(HMMTrained, sequenceIterative)
+      #this was the mistake. We need just sum up the last colum ("temp") each time
+      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
+      generateHMMSequencesIteration(HMMTrained, sequenceIterative, forwardProb, theta, symbols)
+    }    
   }
-  
-  return(partitions)
-  
-}
+} 
+
+
+##DANIELE DESPERATION:
 
 
 
@@ -767,188 +1091,6 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
 }
 
 
-sortSequencesByInterestingness <- function(interestingSequences){
-  r<-order(interestingSequences[[3]])
-  newInterestingConditionTypes<-interestingSequences[[1]][r]
-  newInterestingSequences<-interestingSequences[[2]][r]
-  newInterestingInterestingness<-interestingSequences[[3]][r]
-  return (list(newInterestingConditionTypes, newInterestingSequences, newInterestingInterestingness))
-}
 
-selectSymbolsTopKInterestingSequences <- function(intersection, q, k)
-{
-  toMoveSymbolsUnion <- c()   
-  
-  for(i in 1:k)
-  {
-    toMoveSymbolsCur <- unlist(intersection[which(!q==TRUE)[[i]]])
-    toMoveSymbolsUnion <- union(toMoveSymbolsUnion, toMoveSymbolsCur)
-  }
-  
-  return(toMoveSymbolsUnion)
-}
-
-
-#TO RUN. Update emission probabilities moving symbols in a new state
-updateEmissionMatrix<-function(newState, toMoveSymbols, HMMTrained){
-  symbols<-as.vector(HMMTrained$Symbols)
-  states<-HMMTrained$States
-  toMoveSymbols<-as.vector(unlist(toMoveSymbols))
-  newEmissionMatrix<-matrix(ncol=length(symbols), nrow=length(states)+1, dimnames=list(c(states,newState),symbols))
-  notMovedSymbols<-as.vector(setdiff(symbols, toMoveSymbols))
-  t<-runif(length(toMoveSymbols))
-  r<-t/sum(t)  
-  #set to zero emission values for toMoveSymbols in ALL DATA (sink) state
-  newEmissionMatrix[1, toMoveSymbols]<-0  
-  #define emission values for toMoveSymbols in the newState (last row)
-  newEmissionMatrix[nrow(newEmissionMatrix), toMoveSymbols]<-r
-  #set to zero all the other emission values
-  newEmissionMatrix[nrow(newEmissionMatrix),notMovedSymbols]<-0
-  #normalise emission values for the not moved symbols in the ALL DATA (sink) state
-  newEmissionMatrix[1,notMovedSymbols]<-HMMTrained$emissionProb[1,notMovedSymbols]/sum(HMMTrained$emissionProb[1, notMovedSymbols])
-  #assign the values to the new emission matrix
-  if(!nrow(HMMTrained$emissionProb)==1){
-    newEmissionMatrix[2:(nrow(newEmissionMatrix)-1),symbols]<-HMMTrained$emissionProb[2:(nrow(newEmissionMatrix)-1),symbols]}else{   
-    } 
-  return(newEmissionMatrix)
-}
-
-newStateHMMTrainingConstrained <-function(newState, toMoveSymbols, HMMTrained, sortedSequences, sequences, LogLikUnconst){
-  #Adding a new state 
-  #build the emission matrix to move the new symbols from the sink state (ALL DATA) to the new state
-  print("New state in constrained HMM:")
-  print(newState)
-  print("Symbols to move in constrained HMM")
-  print(toMoveSymbols)
-  newEmissionProb<-updateEmissionMatrix(newState, toMoveSymbols, HMMTrained)  
-  #initialisation of a new HMM with the augmented set of states and the constrained emission matrix
-  states = HMMTrained$States  
-  symbols = HMMTrained$Symbols
-  updatedInitHMM<-initHMM(c(states,newState), symbols,  emissionProbs= newEmissionProb)
-  print("States:")
-  print(c(states,newState))
-  #optimise the HMM model
-  constrainedTrainedHMM <-trainBaumWelch(updatedInitHMM, as.vector(sequences)) 
-  #compute the loglikelihood and verify it is greter or equal to the unconstrained model with the same number of states
-  modelPerformance = computeModelLogLikelihood(sortedSequences, sequences, constrainedTrainedHMM, LogLikUnconst, HMMTrained)
-  
-  # modelPerformance = computeModelLogLikelihood(sortedSequences, sequences, symbols, constrainedTrainedHMM)
-  nrStates<- length(c(states, newState))
-  return(list(constrainedTrainedHMM, toMoveSymbols, nrStates, modelPerformance[[3]], modelPerformance[[1]]))
-}
-
-#requires package "hmm.discnp"
-#To be used in case the unconstrained emission matrix is build from scratch. Loglikhood does not change with no states: run it once for all
-computeModelLogLikelihood <- function(sortedSequences, sequences, constrainedTrainedHMM, LogLikUnconst, HMMTrained){
-  continue<-FALSE
-  library("hmm.discnp")
-  
-  #data of constrained model
-  EmissMatrixConst = constrainedTrainedHMM$emissionProbs
-  TransMatrixConst = constrainedTrainedHMM$transProbs
-  StartProbsConst = constrainedTrainedHMM$startProbs
-  symbols<-constrainedTrainedHMM$Symbols
-  states<-constrainedTrainedHMM$States
-  #LogLikHmm requires list of sequences
-  LogLikConst = logLikHmm(sortedSequences, list(Rho=t(EmissMatrixConst), tpm = TransMatrixConst, ispd = StartProbsConst ) )
-  
-  print(LogLikConst)
-  print(LogLikUnconst)
-  
-  # the constrained model must have loglikelihood >= than the one of the unconstrained model 
-  if(LogLikConst >= LogLikUnconst){
-    continue=TRUE
-    print("The Log-Likelihood is no-worse than the unconstrained model") 
-    print(constrainedTrainedHMM)
-  }else{
-    #TODO: print HMM.
-    print("Stopping process. The log-likelihood is worse than the unconstrained model. The previous model was the best one so far.Printing it here:")
-    print(HMMTrained)
-    continue=FALSE
-    #stop("Stopping process. The log-likelihood is worse than the unconstrained model.")    
-  }
-  return(list(continue, constrainedTrainedHMM, LogLikConst)) 
-}
-
-#Compare log-likelihood at current iteration with log-likelihood in next iteration
-compareModelLogLikelihoodAtIteration<-function(logLikCur, logLikNext){
-  continue<-FALSE
-  # the next model must have loglikelihood > than the one of the current model 
-  if(logLikNext > logLikCur)
-  {
-    continue=TRUE
-    print("log likelihood next HMM, more states ")
-    print(logLikNext)
-    print("log likelihood current HMM")
-    print(logLikCur)
-  }
-  print("log likelihood next HMM, more states ")
-  print(logLikNext)
-  print("log likelihood current HMM")
-  print(logLikCur)
-  
-  return(continue)
-}
-
-#DANIELE: keep the sequential code here as back, just in case
-getThetaProbableSequences<-function(HMMTrained, theta){
-  #Theta-Probable sequences as global variables
-  thetaProbableProbabilities <<- list()
-  thetaProbableSequences <<- list()
-  
-  index <<- 1
-  
-  #initialize the index of the two global list variables ThetaProbableProbabilities, ThetaProbableSequences
-  #populate the global list variables ThetaProbableProbabilities, ThetaProbableSequences.
-  
-  
-  generateProbableSequences(HMMTrained, theta)
-  
-  #put them together into a single list.
-  thetaProbableValues = list(thetaProbableSequences, thetaProbableProbabilities)
-  return(thetaProbableValues)
-}   
-
-#Daniele has fixed the data format (as.vector) for symbols 10.04.2017, verified:CORRECT
-generateProbableSequences<-function(HMMTrained, theta){
-  symbols<-as.vector(HMMTrained$Symbols)
-  M <- length(symbols)
-  print(M)
-  for (j in 1:M) {
-    print(j)
-    # this is the first step from the default "start" state. We create a sequence of length two just to compute the probability of the first time step in a sequence. Such probability does not change by changing the second element of the sequence (symbols[1] or sumbols[2] etc)  	
-    init <- symbols[j]
-    sequence <- c(init, symbols[1])
-    forwardProb = forward(HMMTrained, sequence)
-    # this is the inductive case
-    generateHMMSequencesIteration(HMMTrained, init, forwardProb, theta, symbols)
-  }
-  
-}
-
-
-
-#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
-generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, theta, symbols) {	
-  if(length(sequence)==1){
-    forwardProbSum <- sum(exp(forwardProb[, 1]))
-  }else{forwardProbSum <- sum(exp(forwardProb[, length(sequence)]))}
-  
-  if(forwardProbSum > theta){
-    #saved as global variables
-    thetaProbableSequences[[index]] <<- sequence
-    thetaProbableProbabilities[[index]] <<- forwardProbSum
-    index <<- index + 1
-    
-    #the probability decreases with the addition of new symbols. Sooner or later the prob will be less than theta. When this happens a new combination of 	symbols starts: see the output 	
-    for (i in 1:length(symbols)) {
-      sequenceIterative <- c(sequence, symbols[i])
-      forwardProb = forward(HMMTrained, sequenceIterative)
-      #this was the mistake. We need just sum up the last colum ("temp") each time
-      #forwardProbSum <- sum(exp(logForwardProb[, temp]))
-      generateHMMSequencesIteration(HMMTrained, sequenceIterative, forwardProb, theta, symbols)
-    }    
-  }
-}  
 
 

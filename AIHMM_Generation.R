@@ -61,8 +61,8 @@ loopOverSequenceSet <- function(pathToData, k){
       #Do not compute theta if you want to freely pass it
       theta<<-initialisedProcess[[3]]
       HMMTrained<<-initialisedProcess[[4]]      
-      #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
       
+      #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
       #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. Doesn't take too long actually?
       ##sortedSequencesIDs <<- sortedSequencesIDs
       sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs)
@@ -71,6 +71,8 @@ loopOverSequenceSet <- function(pathToData, k){
       #EXPERIMENTAL FUNCTIONS. Not really necessary.
       #sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
       #sortedSequences <<- filter_sequences_with_most_frequent_symbols(sortedSequences, sortedSequencesBeforeFiltering)
+      print("Computing loglikelihood for ALL DATA state")
+      
       print("Computing loglikelihood for ALL DATA state")
       #compute the loglikelihood of the model with one state
       library("hmm.discnp")
@@ -89,9 +91,9 @@ loopOverSequenceSet <- function(pathToData, k){
    	  parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sampleObs, theta=theta, mc.cores = AMOUNT_WORKERS )
    	  
    	  #now combine the different parts found.
-   	  thetaFrequentSequences = combine_partitions_theta_freq_sequences(parts_theta_frequent_sequences)
+   	  thetaFrequentSequences = combine_partitions_sequences(parts_theta_frequent_sequences)
    	  
-   	  #plain old sequential part
+   	  #plain old sequential part. Just compute once based on the dataset.
       #thetaFrequentSequencesSeq <-getThetaFrequentSequences(sortedSequences, theta)  
       
       #build the unconstrained model from scratch . The loglikelihood is always the same.  
@@ -118,13 +120,22 @@ loopOverSequenceSet <- function(pathToData, k){
         print(format(Sys.time(), "%a %b %d %X %Y"))
   	  	print(paste("Generating probable sequences..."))
   
+  	  	#Good old sequential version
   	  	thetaProbableSequences <- getThetaProbableSequences(HMMTrained, theta)
+  	  	
+  	  	#new parallel version
+  	  	#thetaProbableValues = generateProbableSequencesNewParallel(HMMTrained, theta, amount_workers)
+  	  	#system.time(getThetaProbableSequencesNewParallel(HMMTrained, theta))
     
       	print(format(Sys.time(), "%a %b %d %X %Y"))
       	print("Generating and sorting interesting sequences")
   
       	#it returns: [[1]]=conditionType [[2]] interesting sequences [[3]] interestingness. TODO: extract the uninteresting sequences
-      	interestingSequences<-computeAllSequencesInterestingness(thetaFrequentSequences, thetaProbableSequences, HMMTrained,theta)
+      	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
+      	interestingSequences = combine_partitions_interesting_sequences(interestingSequencesParts)
+      	#interestingSequencesSequential<-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
+      	
+      	
         	      	
       	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
       	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)     	
