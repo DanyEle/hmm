@@ -318,22 +318,21 @@ sortSequencesWithIDs <- function(sequences){
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Sorting sequences and IDs")	
   #create three lists from sequences: one global, one for seqeunces and one for sequence'IDs
-  sequencesLists<-list()
-  sequencesLists1<-list()
-  sequencesLists2<-list()
+  sequencesListsOld<-list()
+  sequencesLists1Old<-list()
+  sequencesLists2Old<-list()
   
   
   print(length(unique(sequences$SequenceID)))
   
-  for(i in 1:length(unique(sequences$SequenceID)))
-  {
-    sequenceId = unique(sequences$SequenceID)[[i]]
-    
-    #Take all the actions of the current sequence
-    sequencesLists[[i]]<-sequences[sequences$SequenceID==sequenceId,]
-    sequencesLists1[[i]]<-sapply(sequencesLists[[i]]$sample,as.character)
-    sequencesLists2[[i]]<-sequencesLists[[i]]$SequenceID
-  }
+  
+  #Let's make it more efficient, step by step
+  
+  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ])
+  #for every element in the sequencesList, get the corresponding sample as a characer
+  sequencesLists1 = lapply(sequencesLists, function(sequenceListElement) as.character(sequenceListElement$sample) )
+  #And get the sequence ID as well
+  sequencesLists2 = lapply(sequencesLists, function(sequenceListElement) sequenceListElement$SequenceID  )
   
   #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. 
   #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
