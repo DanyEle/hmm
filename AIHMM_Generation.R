@@ -12,7 +12,7 @@ MARK_SEQUENCE_IDS = FALSE
 #TRUE = For Damevski's dataset or other datasets, in case we may need to carry out some pre-processing in other functions / files
 LOAD_CUSTOM_SEQUENCES = TRUE
 
-AMOUNT_WORKERS = 256
+AMOUNT_WORKERS = 254
 
 
 
@@ -37,8 +37,6 @@ main <- function()
   while(k <= 5)
   {
     sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
-    
-    
     loopOverSequenceSet(DATA_PATH, k)
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
@@ -64,7 +62,7 @@ loopOverSequenceSet <- function(pathToData, k){
       #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. Doesn't take too long actually?
       ##sortedSequencesIDs <<- sortedSequencesIDs
       #NOT PARALLEL, but just split in N partitions to reduce access time to huge dataframe.
-      sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs, amount_workers)
+      sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs, AMOUNT_WORKERS)
       sortedSequences <<- sortedSequencesIDs[[1]]
       #sortedSequencesBeforeFiltering <- sortedSequences
       #EXPERIMENTAL FUNCTIONS. Not really necessary.
@@ -87,7 +85,7 @@ loopOverSequenceSet <- function(pathToData, k){
    	  partitions_sampleObs = find_partitions_for_sorted_sequences(sortedSequences, AMOUNT_WORKERS)
    	  #  sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
 
-   	  parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sampleObs, theta=theta, mc.cores = AMOUNT_WORKERS )
+   	  parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sampleObs, theta=theta, mc.cores = AMOUNT_WORKERS)
    	  
    	  #now combine the different parts found.
    	  thetaFrequentSequences = combine_partitions_sequences(parts_theta_frequent_sequences)
@@ -133,8 +131,6 @@ loopOverSequenceSet <- function(pathToData, k){
       	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
       	interestingSequences = combine_partitions_interesting_sequences(interestingSequencesParts)
       	#interestingSequencesSequential<-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
-      	
-      	
         	      	
       	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
       	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)     	

@@ -69,13 +69,26 @@ find_partitions_for_sequences<- function(sequences, amount_workers)
 }
 
 
+#Put all the different partitions together
+combine_partitions_sequences <-function(parts_sequences)
+{
+  library(purrr)
+  list_return = list()
+  list_return[[1]] = flatten(parts_sequences[1, ])
+  list_return[[2]] = flatten(parts_sequences[2, ])
+  list_return[[3]] = flatten(parts_sequences[3, ])
+  
+  
+  return(list_return)
+}
+
+
+
 
 #Put all the different partitions together
 combine_partitions_sequences <-function(parts_sequences)
 {
   library(purrr)
-  
-  
   list_return = list()
   list_return[[1]] = flatten(parts_sequences[1, ])
   list_return[[2]] = flatten(parts_sequences[2, ])
@@ -350,7 +363,7 @@ baumWelchRecursionFixed <- function (hmm, observations){
 #Sort sequences and their IDs. used in getThetaFrequentSequences
 #Input: a data frame with multiple vectors (sequences, IDS) 
 #Output: a list of two lists of vectors (sequences and IDs)
-sortSequencesWithIDs <- function(sequences){
+sortSequencesWithIDs <- function(sequences, amount_workers){
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Sorting sequences and IDs")	
   #create three lists from sequences: one global, one for seqeunces and one for sequence'IDs
@@ -363,6 +376,7 @@ sortSequencesWithIDs <- function(sequences){
   library(purrr)
   list_partitions_sequences = find_partitions_for_sequences(sequences, amount_workers)
   #Doesn't fit in cache --> Causes too many cache faults. Parallel version with only 1 thread actually performs better!
+  library("parallel")
   
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
@@ -686,7 +700,6 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
   thetaSequencesSetDiffModel = setdiff(thetaProbableSequences[[1]], thetaFrequentSequences[[1]])
   #Theta-Probable intersectin with Theta-Frequent (viceversa holds too)
   thetaSequencesIntersection = intersect(thetaProbableSequences[[1]], thetaFrequentSequences[[1]])
-  
   
   partitions_interestingness = mcmapply(compute_interestingness_per_partition, partition_theta_union = list_partitions_theta_union, 
                                        thetaFrequentSequences=replicate(amount_workers, thetaFrequentSequences, FALSE), 

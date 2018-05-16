@@ -49,3 +49,33 @@ build_matrix <- function()
   
   
 }
+
+
+
+#input: dataset. list of symbols.
+display_symbols_occurrences <- function(sample)
+{
+  table(sample)
+  
+  #increased bottom margin so as to show long text.
+  par(mar= c(15, 4, 4, 2))
+  #display graph with all labels.
+  plot(table(sample), las=2, ann = FALSE)
+}
+
+#Daniele: not really necessary.
+#normalized by the overall amount of symbols' occurrences. from 0 to 1.
+display_symbols_frequency<- function(sample)
+{
+  totalSymbolsAmount = length(sample)
+  
+  sampleFreq = table(sample) / totalSymbolsAmount
+  
+  #increased bottom margin so as to show long text.
+  par(mar= c(15, 4, 4, 2))
+  #display graph with all labels.
+  plot(sampleFreq, las=2, ann = FALSE)
+  
+  return(sampleFreq)
+}
+
