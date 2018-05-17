@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
@@ -8,11 +8,10 @@ FREQUENCY_PRINT = 5000
 
 THRESHOLD_RARE_MSG = 0.03
 
+AMOUNT_WORKERS = 8
+
+
 #Also overall amount of cores used (virtual + physical)
-
-AMOUNT_WORKERS = 4
-
-
 
 #######################
 #####MAIN##############
@@ -25,27 +24,26 @@ load_marked_sequences <- function()
  # print("Starting sequential")
  # print(Sys.time())
   #Sequential 
-  #list_devs_messages = load_unique_messages_for_developers(DATA_PATH)
+  # list_devs_messages = load_unique_messages_for_developers(DATA_PATH)
   #Array of messages, sequential
-  #all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
+  # all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
   #No rare messages found for the full dataset. No need to invoke this function as well. 
   #messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages) #NOT USED!
-  #messages_to_remove = c()
+  # messages_to_remove = c()
   #2: Remove cursor movement messages (too frequent) and rare messages identified above from the full dataset loaded
   #We may omit passing messages_to_remove, because no rare messages were actually identified.
   #Also load the timestamp and the developer id, alongside the message
   #datasetAndPositions[[1]] = overall dataset containing all the observations. 
   #datasetAndPositions[[2]] = contains start and end position of each dataset
-  #dataset_and_positions = load_and_filter_dataset(list_devs_messages, messages_to_remove = messages_to_remove, DATA_PATH)
-  #sampleObs = dataset_and_positions[[1]]
-  #startEndVectors = dataset_and_positions[[2]]
+  # dataset_and_positions = load_and_filter_dataset(list_devs_messages, messages_to_remove = messages_to_remove, DATA_PATH)
+  # sampleObs = dataset_and_positions[[1]]
+  # startEndVectors = dataset_and_positions[[2]]
   #As long as the amount of datasets used
-  #start_indexes_datasets = startEndVectors[[1]]
-  #end_indexes_datasets = startEndVectors[[2]]
-  #partitions = create_partitions_for_workers(start_indexes_datasets, end_indexes_datasets, sampleObs)
-  #indexes = find_indices_for_partitions(partitions)
-  #sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
-  
+  # start_indexes_datasets = startEndVectors[[1]]
+  # end_indexes_datasets = startEndVectors[[2]]
+  # partitions = create_partitions_for_workers(start_indexes_datasets, end_indexes_datasets, sampleObs)
+  # indexes = find_indices_for_partitions(partitions)
+  # sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
   
   
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo")
@@ -54,9 +52,11 @@ load_marked_sequences <- function()
   #names_size_datasets[[2]] = Vector containing size of all datasets (in bytes)
   names_size_datasets = load_names_size_datasets(DATA_PATH)
   
-  #This is the right scheduling order by decreasing dataset size
   names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets)
- 
+  
+  #This is the right scheduling order by decreasing dataset size
+  #datasets_loaded = load_datasets_by_name(names_datasets_sorted, messages_to_remove)
+  
   indexes = find_indices_for_partitions(names_datasets_sorted)
 
   print(paste("Processing", length(names_datasets_sorted), "datasets"))
@@ -66,16 +66,15 @@ load_marked_sequences <- function()
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
     sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
-                                      outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS, mc.preschedule = FALSE) 
-    
+                                      outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
   print("Finished parallel")
   
   print(Sys.time())
   
   #Now merge the different partitions
-  sequences_marked = combine_sequences_marked(sequences_marked_split)
-  
-  
+  #sequences_marked_list[[1]] = merged sequences
+  #sequences_marked_list[[2]] = list of data frames
+  sequences_marked_list = combine_sequences_marked(sequences_marked_split)
   
   return(sequences_marked)
   
@@ -99,20 +98,20 @@ create_partitions_for_workers <- function(start_indexes_datasets, end_indexes_da
 
 combine_sequences_marked <- function(sequences_marked_split)
 {
-  list_data_frames = list()
+  list_data_frames <- list()
   
   #combine the resulting data frames into a list
   for(i in 1:ncol(sequences_marked_split))
   {
     data_frame_cur = as.data.frame(sequences_marked_split[, i])
-    list_data_frames[[i]] = data_frame_cur
+    list_data_frames[[i]] <- data_frame_cur
   }
   
   library("data.table")
   #now "unwrap" the list into one single data frame
   merged_data_frames = rbindlist(list_data_frames)
   
-  return(merged_data_frames)
+  return(list(merged_data_frames, list_data_frames))
 }
 
 
@@ -210,12 +209,11 @@ find_splitting_point_different_developer <- function(start,  sampleObs, i, no_co
 
 
 
-load_filter_dataset_given_name_parallel <- function(dataset_name, index, outlier_symbols)
+load_filter_dataset_given_name_parallel <- function(dataset_name, outlier_symbols, index)
 {
   #Great, now load the dataset passed and remove outliers from it
-  print(paste("Loading ", dataset_name , " of size ", file.size(dataset_name), " bytes"))
-  
-  sampleObs = load_and_filter_single_dataset(dataset_name, outlier_symbols)
+  dataLoaded = read.csv(dataset_name, sep=SEPARATOR, header=T)
+  sampleObs = load_filter_single_dataset(outlier_symbols, dataLoaded)
   
   print(paste("Loaded " , dataset_name, " with ", length(sampleObs$sample), " messages.", sep=""))
   
@@ -224,35 +222,47 @@ load_filter_dataset_given_name_parallel <- function(dataset_name, index, outlier
 }
 
 
-
-
-load_and_filter_single_dataset <- function(dataset_name, messages_to_remove)
+load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
 {
-    dataLoaded <- read.csv(dataset_name, sep=SEPARATOR, header=T)
-    
-    timestamps_loaded_remove_symbols = as.array(dataLoaded$timestamp)
-    developers_loaded_remove_symbols = as.array(dataLoaded$developer_id)
-    messages_loaded_remove_symbols = as.array(dataLoaded$message)
-    
-    messages_filtered = messages_loaded_remove_symbols
-    timestamps_filtered  = timestamps_loaded_remove_symbols
-    developers_filtered = developers_loaded_remove_symbols
-    
-    #Here, actually filter out the symbols to remove
-    for (message in messages_to_remove)
-    {
-      timestamps_filtered = timestamps_filtered[which(messages_filtered != message)]
-      developers_filtered = developers_filtered[which(messages_filtered != message)]
-      messages_filtered = messages_filtered[which(messages_filtered != message)]
-    }
-    
+  timestamps_loaded_remove_symbols = as.array(dataLoaded$timestamp)
+  developers_loaded_remove_symbols = as.array(dataLoaded$developer_id)
+  messages_loaded_remove_symbols = as.array(dataLoaded$message)
   
-  sequences = do.call(rbind, Map(data.frame, sample=messages_filtered, timestamp=timestamps_filtered, developer=developers_filtered))
+  messages_filtered = messages_loaded_remove_symbols
+  timestamps_filtered  = timestamps_loaded_remove_symbols
+  developers_filtered = developers_loaded_remove_symbols
+  
+  #Here, actually filter out the symbols to remove
+  for (message in messages_to_remove)
+  {
+    timestamps_filtered = timestamps_filtered[which(messages_filtered != message)]
+    developers_filtered = developers_filtered[which(messages_filtered != message)]
+    messages_filtered = messages_filtered[which(messages_filtered != message)]
+  }
+  
+  sequences = data.frame(sample=messages_filtered, timestamp = timestamps_filtered, developer = developers_filtered)
   
   return(sequences)
 }
+
+
+
+
+
+load_datasets_by_name <- function(names_datasets_sorted, messages_to_remove)
+{
+  datasets_loaded = list()
   
+  for(i in 1:length(names_datasets_sorted))
+  {
+    print(paste("Loading and removing symbols: ", names_datasets_sorted[i]))
+    dataLoaded = read.csv(names_datasets_sorted[i], sep=SEPARATOR, header=T)
+    datasets_loaded[[i]] = filter_single_dataset( messages_to_remove, dataLoaded)
+  }
   
+  return(datasets_loaded)
+  
+}
 
 
 
