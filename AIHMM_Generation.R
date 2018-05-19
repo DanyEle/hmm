@@ -10,6 +10,7 @@ SEPARATOR_DATASET = ";"
 MARK_SEQUENCE_IDS = FALSE
 
 #TRUE = For Damevski's dataset or other datasets, in case we may need to carry out some pre-processing in other functions / files
+#Based on sequences_global <<-
 LOAD_CUSTOM_SEQUENCES = TRUE
 
 
@@ -28,8 +29,6 @@ main <- function()
   
   #sink(paste("hmm_loading_dataset.txt"))
   #DANIELE LOADED BEFOREHAND
-  sequences_global <<- load_custom_sequences_if_needed() 
-  #sequences_global <<- sequences_marked
   #sink()
   
  
@@ -48,10 +47,18 @@ main <- function()
 
 
 loopOverSequenceSet <- function(pathToData, k){
+  
+  
+      #Initialization begin
+  
+      sequences_global <<- load_custom_sequences_if_needed() 
+      
       print(format(Sys.time(), "%a %b %d %X %Y"))
 	    print(paste("Initializing the process..."))
       initialisedProcess<-initializeHMM(pathToData)
-      sequencesIDs<<-initialisedProcess[[1]]
+      #sequenceIDs is also sequences_global$sample
+      sequences<<-initialisedProcess[[1]]
+      #  symbols <-unique(sequences_global$sample)
       symbols<-initialisedProcess[[2]]
       #Do not compute theta if you want to freely pass it
       theta<<-initialisedProcess[[3]]
@@ -60,8 +67,7 @@ loopOverSequenceSet <- function(pathToData, k){
       #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
       #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. Doesn't take too long actually?
       ##sortedSequencesIDs <<- sortedSequencesIDs
-      #NOT PARALLEL, but just split in N partitions to reduce access time to huge dataframe.
-      sortedSequencesIDs <- sortSequencesWithIDs(sequencesIDs, AMOUNT_WORKERS)
+      sortedSequencesIDs <- sortSequencesWithIDs(sequences, AMOUNT_WORKERS)
       sortedSequences <<- sortedSequencesIDs[[1]]
       #sortedSequencesBeforeFiltering <- sortedSequences
       #EXPERIMENTAL FUNCTIONS. Not really necessary.
@@ -96,7 +102,7 @@ loopOverSequenceSet <- function(pathToData, k){
       require(HMM)  
   	  print("Building an unconstrained model from scratch") 
   	  HMMInit = initHMM(States=c("state 1", "state 2"), symbols)
-  	  unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequencesIDs[[1]]))
+  	  unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
       #data of unconstrained model
       EmissMatrixUnconst = unconstrainedHMM$emissionProbs
       TransMatrixUnconst = unconstrainedHMM$transProbs
@@ -109,6 +115,8 @@ loopOverSequenceSet <- function(pathToData, k){
       continue=TRUE
       i<-1
       LogLikCur<<-LogLikInit
+      
+      #Initialization end
       
       while(continue)
       {

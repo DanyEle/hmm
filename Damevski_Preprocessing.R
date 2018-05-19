@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
@@ -71,10 +71,8 @@ load_marked_sequences <- function()
   
   print(Sys.time())
   
-  #Now merge the different partitions
-  #sequences_marked_list[[1]] = merged sequences
-  #sequences_marked_list[[2]] = list of data frames
-  sequences_marked_list = combine_sequences_marked(sequences_marked_split)
+  #Now merge the different partitions into one data table
+  sequences_marked = combine_sequences_marked(sequences_marked_split)
   
   return(sequences_marked)
   
@@ -98,20 +96,20 @@ create_partitions_for_workers <- function(start_indexes_datasets, end_indexes_da
 
 combine_sequences_marked <- function(sequences_marked_split)
 {
-  list_data_frames <- list()
+  list_partition <- list()
   
   #combine the resulting data frames into a list
   for(i in 1:ncol(sequences_marked_split))
   {
     data_frame_cur = as.data.frame(sequences_marked_split[, i])
-    list_data_frames[[i]] <- data_frame_cur
+    list_partition[[i]] <- data_frame_cur
   }
   
   library("data.table")
   #now "unwrap" the list into one single data frame
-  merged_data_frames = rbindlist(list_data_frames)
+  merged_data_frames = rbindlist(list_partition)
   
-  return(list(merged_data_frames, list_data_frames))
+  return(merged_data_frames)
 }
 
 
@@ -245,24 +243,6 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
   return(sequences)
 }
 
-
-
-
-
-load_datasets_by_name <- function(names_datasets_sorted, messages_to_remove)
-{
-  datasets_loaded = list()
-  
-  for(i in 1:length(names_datasets_sorted))
-  {
-    print(paste("Loading and removing symbols: ", names_datasets_sorted[i]))
-    dataLoaded = read.csv(names_datasets_sorted[i], sep=SEPARATOR, header=T)
-    datasets_loaded[[i]] = filter_single_dataset( messages_to_remove, dataLoaded)
-  }
-  
-  return(datasets_loaded)
-  
-}
 
 
 

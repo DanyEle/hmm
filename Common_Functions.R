@@ -34,38 +34,11 @@ find_partitions_for_sorted_sequences <- function(sortedSequences, amount_workers
 
 #Input: the set of sortedSequences
 #       the amount of workers onto that the work is gonna be parallelized
-#Output: X partitions, where sortedSequences is divided into X chunks. X = amount_workers passed as input.
-find_partitions_for_sequences<- function(sequences, amount_workers)
+#Output: A list of X partitions, where sortedSequences is divided into X chunks. X the amount of indexes passed as input.
+find_partitions_for_sequences<- function(sequences, start_end_indexes)
 {
-  #didn't find any automatic way, so let's do it by hand..
-  
-  #Contains list of all the different data frames.
-  partitions = list() #Can we have a list of data frames? Yes
-  partition_size = ceiling(length(sequences$sample) / amount_workers)
-  
-  start = 1
-  
-  for(i in 1:amount_workers)
-  {
-    partition_start = start
-    
-    partition_end = i * partition_size
-    #if going slightly beyond the actual length (because of ceiling function), then cut it
-    if(partition_end >= length(sequences$sample))
-    {
-      partition_end = length(sequences$sample)
-    }
-    start = partition_end + 1
-    #Great, found the start and end indexes. Now actually form the partitions from them.
-    partitions[[i]] = data.frame(sequences$sample[partition_start:partition_end], sequences$timestamp[partition_start:partition_end]
-                                 ,sequences$developer[partition_start:partition_end], sequences$SequenceID[partition_start:partition_end]
-                                )
-    colnames(partitions[[i]]) <- c("sample","timestamp", "developer", "SequenceID")
-    
-    print(paste(" i = ", i, " start = ", partition_start, " end = ", partition_end))
-  }
-  
-  return(partitions)
+  #Beautiful one liner to create partitions out
+  return(lapply(1:length(start_end_indexes[[1]]), function(i) sequences[start_end_indexes[[1]][i]:start_end_indexes[[2]][i]]))
 }
 
 
@@ -374,10 +347,13 @@ sortSequencesWithIDs <- function(sequences, amount_workers){
   #list_partitions_sequences = list()
   
   library(purrr)
-  list_partitions_sequences = find_partitions_for_sequences(sequences, amount_workers)
+  start_end_indexes = return_partition_of_data_structure(nrow(sequences), amount_workers)
+  list_partitions_sequences = find_partitions_for_sequences(sequences, start_end_indexes)
   #Doesn't fit in cache --> Causes too many cache faults. Parallel version with only 1 thread actually performs better!
   library("parallel")
   
+  #convert partitions into data frame
+
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
   sequencesLists = flatten(parts_lists[1, ])
@@ -423,8 +399,14 @@ sortSequencesWithIDs <- function(sequences, amount_workers){
   return (list(orderedSequences, orderedIDs)) 
 }
 
+
+
+
+
 generateListsforSequences <- function(sequences)
 {
+  sequences = as.data.frame(sequences)
+  
   sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ])
   #for every element in the sequencesList, get the corresponding sample as a characer
   sequencesLists1 = lapply(sequencesLists, function(sequenceListElement) as.character(sequenceListElement$sample) )
@@ -662,11 +644,55 @@ computeSequenceInterestingness <- function(sequence, thetaFrequentSequences, the
   }
 }
 
+#x = input dataset. n = amount of partitions
 chunk2 <- function(x,n) {
   split(x, cut(seq_along(x), n, labels = FALSE)) 
 }
 
 
+#Courtesy of Dr. Massimo Torquati for the initial code skeleton and idea for good partitioning
+#Input: length_data_structure = amount of rows of data strucure (or its length)
+#       nw = amount of workers
+#Output: list containing [[1]] = a vector of start indexes for partitions
+#                        [[2]] = a vector of end indexes for partitions
+return_partition_of_data_structure <- function(length_data_structure, nw)
+{
+  size = floor(length_data_structure / nw)
+  more =  (length_data_structure %% nw) 
+  start = 1
+  stop = 0
+  
+  start_partitions = c()
+  end_partitions = c()
+  
+  for(i in 1:nw)
+  {
+    start_local = stop + 1
+    start = stop
+    stop  = start + size + return_more(more) 
+    
+    print(paste("i = " , i , "start = ", start_local, " end = ", stop, " size = ", stop - start))
+    
+    more = more - 1
+    start_partitions[i] = start_local
+    end_partitions[i] = stop
+  }
+  
+  return(list(start_partitions, end_partitions))
+}
+
+return_more <- function(more)
+{
+  if(more > 0)
+  {
+    return(1)
+  }
+  else
+  {
+    return(0)
+  }
+}
+  
 
 
 #Input: ThetaProbableValuesnoDups: List containing non-duplicated theta-probable sequences[[2]] and their corresponding probability[[1]]
