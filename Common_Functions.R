@@ -1,59 +1,103 @@
 
-#Input: the set of sortedSequences
-#       the amount of workers onto that the work is gonna be parallelized
-#Output: X partitions, where sortedSequences is divided into X chunks. X = amount_workers passed as input.
-find_partitions_for_sorted_sequences <- function(sortedSequences, amount_workers)
+
+
+
+initialization_phase <- function()
 {
-  #didn't find any automatic way, so let's do it by hand..
+  #Initialization begin
+  #sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
+  #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
+  sequences_loaded_list_partitions <- load_custom_sequences_if_needed() 
   
-  partitions = list()
-  partition_size = ceiling(length(sortedSequences) / amount_workers)
+  sequences_loaded = sequences_loaded_list_partitions[[1]]
+  partitions_sequences_loaded = sequences_loaded_list_partitions[[2]]
   
-  start = 1
+  print(format(Sys.time(), "%a %b %d %X %Y"))
+  print(paste("Initializing the process..."))
+  initialisedProcess<-initializeHMM(pathToData, sequences_loaded)
+  #sequenceIDs is also sequences_global$sample
   
-  for(i in 1:amount_workers)
-  {
-    partition_start = start
-    
-    partition_end = i * partition_size
-    #if going slightly beyond the actual length (because of ceiling function), then cut it
-    if(partition_end >= length(sortedSequences))
-    {
-      partition_end = length(sortedSequences)
-    }
-    start = partition_end + 1
-    #Great, found the start and end indexes. Now actually form the partitions from them.
-    partitions[[i]] = sortedSequences[partition_start:partition_end]
-    
-    print(paste(" i = ", i, " start = ", partition_start, " end = ", partition_end))
-  }
+  #WAS GLOBAL!!
+  sequences<-initialisedProcess[[1]]
+  #  symbols <-unique(sequences_global$sample)
+  symbols<-initialisedProcess[[2]]
+  #Do not compute theta if you want to freely pass it
+  #WAS GLOBAL!!
+  theta<-initialisedProcess[[3]]
+  #WAS GLOBAL!!
+  HMMTrained<-initialisedProcess[[4]]      
   
-  return(partitions)
+  #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
+  #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. 
+  list_partitions_sequences = find_list_partitions_given_data_frame_partitions(partitions_sequences_loaded)
+  
+  #Not really parallel. Only uses 1 worker, but multiple partitions. 
+  sortedSequencesIDs <- sortSequencesWithIDs(list_partitions_sequences)
+  
+  #WAS GLOBAL!
+  sortedSequences <- sortedSequencesIDs[[1]]
+  #sortedSequencesBeforeFiltering <- sortedSequences
+  #EXPERIMENTAL FUNCTIONS. Not really necessary.
+  #sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
+  #sortedSequences <<- filter_sequences_with_most_frequent_symbols(sortedSequences, sortedSequencesBeforeFiltering)
+  
+  print("Computing loglikelihood for ALL DATA state")
+  #compute the loglikelihood of the model with one state
+  library("hmm.discnp")
+  LogLikInit = logLikHmm(sortedSequences, list(Rho=t(HMMTrained$emissionProbs), tpm = HMMTrained$transProbs, ispd = HMMTrained$startProbs ) )
+  print("init log likelihood")
+  print(LogLikInit)
+  print(format(Sys.time(), "%a %b %d %X %Y"))
+  print("Generating theta-frequent sequences...")
+  
+  #Firstly, split the sorted sequences
+  #Firstly, take all sortedSequences and find the start and end indexes to split them
+  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), AMOUNT_WORKERS)
+  partitions_sequences_loaded = find_partitions_for_sequences_given_start_end(sortedSequences, start_end_indexes)
+  parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
+  #now combine the different parts found.
+  thetaFrequentSequences = combine_partitions_sequences(parts_theta_frequent_sequences)
+  
+  #plain old sequential part.
+  #thetaFrequentSequencesSeq <-getThetaFrequentSequences(sortedSequences, theta)  
+  #build the unconstrained model from scratch . The loglikelihood is always the same.  
+  require(HMM)  
+  print("Building an unconstrained model from scratch") 
+  HMMInit = initHMM(States=c("state 1", "state 2"), symbols)
+  unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
+  #data of unconstrained model
+  EmissMatrixUnconst = unconstrainedHMM$emissionProbs
+  TransMatrixUnconst = unconstrainedHMM$transProbs
+  StartProbsUnconst = unconstrainedHMM$startProbs 
+  LogLikUnconst = logLikHmm(sortedSequences, list(Rho=t(EmissMatrixUnconst), tpm =  TransMatrixUnconst, ispd = StartProbsUnconst ) )
+  print(paste("Loglik of unconstrained model with same nr of states: ", LogLikUnconst))
+  
+  #By observing each top interesting sequence per time, which is not already contained in the existing states, e
+  #xtract the symbols for the next state.  Build the newState model and compare the loglikelihood with the previous model. Loop until the loglikelihood is not increasing.	
+
+  #Was global!!  
+  LogLikCur<-LogLikInit
+  
+  
+  return(list(HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst))
 }
 
 
-#Input: the set of sortedSequences
-#       the amount of workers onto that the work is gonna be parallelized
-#Output: A list of X partitions, where sortedSequences is divided into X chunks. X the amount of indexes passed as input.
-find_partitions_for_sequences<- function(sequences, start_end_indexes)
-{
-  #Beautiful one liner to create partitions out
-  return(lapply(1:length(start_end_indexes[[1]]), function(i) sequences[start_end_indexes[[1]][i]:start_end_indexes[[2]][i]]))
+find_list_partitions_given_data_frame_partitions <- function(partitions_sequences_loaded)
+{ 
+  return(lapply(1:ncol(partitions_sequences_loaded), function(i) partitions_sequences_loaded[, i]))
 }
 
 
-#Put all the different partitions together
-combine_partitions_sequences <-function(parts_sequences)
+
+find_partitions_for_sequences_given_start_end <- function(sortedSequences, start_end_indexes)
 {
-  library(purrr)
-  list_return = list()
-  list_return[[1]] = flatten(parts_sequences[1, ])
-  list_return[[2]] = flatten(parts_sequences[2, ])
-  list_return[[3]] = flatten(parts_sequences[3, ])
-  
-  
-  return(list_return)
+  #Beautiful one liner to create partitions out of all sortedSequences passed over
+   return(lapply(1:length(start_end_indexes[[1]]), function(i) sortedSequences[start_end_indexes[[1]][i]:start_end_indexes[[2]][i]]))
 }
+
+
+
 
 
 
@@ -76,21 +120,12 @@ combine_partitions_sequences <-function(parts_sequences)
 combine_partitions_interesting_sequences <-function(interestingSequencesParts)
 {
   library(purrr)
-
-  #Firstly normalize and remove weird content  
-  for(i in 1:ncol(interestingSequencesParts))
-  {
-    #Check if the current one has invalid size (i.e: it does not own any interesting sequences)
-    #Then, "normalize it"
-    if(length(interestingSequencesParts[, i][[1]]) == 0)
-    {
-      interestingSequencesParts[, i][[2]] = list()
-    }
-  }
+  list_return = list()
+  list_return[[1]] = unlist(flatten(interestingSequencesParts[1, ]))
+  list_return[[2]] = unlist(flatten(interestingSequencesParts[2, ]))
+  list_return[[3]] = unlist(flatten(interestingSequencesParts[3, ]))
   
-  interesting_sequences = combine_partitions_sequences(interestingSequencesParts)
-  
-  return(interesting_sequences)
+  return(list_return)
 }
 
 
@@ -128,8 +163,10 @@ displaySymbolsPerState <- function(HMMTrained)
   }
 }
 
+
+
 #To pre-process the dataset and train HMM. It computes theta
-initializeHMM <- function(pathToData)
+initializeHMM <- function(pathToData, sequences_loaded)
 {   
   
   #alternative code in case the set does not contain sequence IDs
@@ -167,12 +204,10 @@ initializeHMM <- function(pathToData)
     }
     
     sequences = newSample
-    
   }
   else if(LOAD_CUSTOM_SEQUENCES == TRUE)
   {
-    sequences <- sequences_global
-    
+    sequences <- sequences_loaded
   }
   
   #Compute theta. Solved issue with theta being computed maxed on the max. sequence ID
@@ -217,13 +252,17 @@ mark_sequences_of_actions_with_ID<-function(sample){
   return(sampleObs)	
 }
 
+
 load_custom_sequences_if_needed <- function()
 {
   if(LOAD_CUSTOM_SEQUENCES == TRUE)
   {
     sequences = load_marked_sequences()
     return(sequences)
-    
+  }
+  else
+  {
+    return(c())
   }
 }
 
@@ -331,40 +370,22 @@ baumWelchRecursionFixed <- function (hmm, observations){
   return(list(TransitionMatrix = TransitionMatrix, EmissionMatrix = EmissionMatrix))
 }
 
-################## This is Algorithm 2
 
 #Sort sequences and their IDs. used in getThetaFrequentSequences
 #Input: a data frame with multiple vectors (sequences, IDS) 
 #Output: a list of two lists of vectors (sequences and IDs)
-sortSequencesWithIDs <- function(sequences, amount_workers){
+sortSequencesWithIDs <- function(list_partitions_sequences){
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Sorting sequences and IDs")	
-  #create three lists from sequences: one global, one for seqeunces and one for sequence'IDs
-  
-  print(length(unique(sequences$SequenceID)))
-
-  #Fine, let's process the sequences in parallel. Fatto 30, facciam 31!
-  #list_partitions_sequences = list()
-  
-  library(purrr)
-  start_end_indexes = return_partition_of_data_structure(nrow(sequences), amount_workers)
-  list_partitions_sequences = find_partitions_for_sequences(sequences, start_end_indexes)
   #Doesn't fit in cache --> Causes too many cache faults. Parallel version with only 1 thread actually performs better!
   library("parallel")
-  
+  library("purrr")
   #convert partitions into data frame
-
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
   sequencesLists = flatten(parts_lists[1, ])
   sequencesLists1 = flatten(parts_lists[2, ])
   sequencesLists2 = flatten(parts_lists[3, ])
-  
-  #good old sequential version
-  #allListsSequences = generateListsforSequences(sequences)
-  #sequencesListsSeq = allListsSequences[[1]]
-  #sequencesLists1Seq = allListsSequences[[2]]
-  #sequencesLists2Seq = allListsSequences[[3]]
   
   #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. 
   #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
@@ -708,18 +729,13 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
   h = 1
   
   #Partition ThetaSequencesUnion and process each chunk separately
-  
-  
-  partitions_theta_union = chunk2(thetaSequencesUnion, amount_workers)
-  list_partitions_theta_union = list()
-  
-  for(i in 1:length(partitions_theta_union))
-  {
-    list_partitions_theta_union[[i]] = partitions_theta_union[[i]]
-  }
-  
   # set operations
   thetaSequencesUnion = union(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
+  
+  start_and_indexes = return_partition_of_data_structure(length(thetaSequencesUnion), amount_workers)
+
+  list_partitions_theta_union = find_partitions_for_sequences_given_start_end(sortedSequences = thetaSequencesUnion, start_and_indexes)
+  
   #Theta-Frequent - Theta-Probable
   thetaSequencesSetDiffData = setdiff(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
   #Theta-Probable - Theta-Frequent
@@ -928,7 +944,7 @@ generateProbableSequences<-function(HMMTrained, theta){
 
 
 
-#used in generateProbableSquences. It creates twoglobal list variables (<<-) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
+#used in generateProbableSquences. It creates twoglobal list variables (movedSymbols) ThetaProbableProbabilities, ThetaProbableSequences. It generates all the sequences with prob>theta not only the longest.
 generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, theta, symbols) {	
   if(length(sequence)==1){
     forwardProbSum <- sum(exp(forwardProb[, 1]))

@@ -59,7 +59,7 @@ load_marked_sequences <- function()
   
   indexes = find_indices_for_partitions(names_datasets_sorted)
 
-  print(paste("Processing", length(names_datasets_sorted), "datasets"))
+  print(paste("Processing", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
   
   print("Starting parallel")
   
@@ -74,8 +74,7 @@ load_marked_sequences <- function()
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
   
-  return(sequences_marked)
-  
+  return(list(sequences_marked, sequences_marked_split))
 }
 
 
