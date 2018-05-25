@@ -21,13 +21,14 @@ initialization_phase <- function()
   
   #WAS GLOBAL!!
   sequences<-initialisedProcess[[1]]
-  #  symbols <-unique(sequences_global$sample)
+  
   symbols<-initialisedProcess[[2]]
   #Do not compute theta if you want to freely pass it
   #WAS GLOBAL!!
   theta<-initialisedProcess[[3]]
   #WAS GLOBAL!!
-  HMMTrained<-initialisedProcess[[4]]      
+  HMMTrained<-initialisedProcess[[4]]
+  
   
   #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
   #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. 
@@ -38,18 +39,21 @@ initialization_phase <- function()
   
   #WAS GLOBAL!
   sortedSequences <- sortedSequencesIDs[[1]]
+  
+  theta = length(sortedSequences)
+  
   #sortedSequencesBeforeFiltering <- sortedSequences
   #EXPERIMENTAL FUNCTIONS. Not really necessary.
   #sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
   #sortedSequences <<- filter_sequences_with_most_frequent_symbols(sortedSequences, sortedSequencesBeforeFiltering)
   
-  print("Computing loglikelihood for ALL DATA state")
+   print("Computing loglikelihood for ALL DATA state")
   #compute the loglikelihood of the model with one state
   library("hmm.discnp")
-  LogLikInit = logLikHmm(sortedSequences, list(Rho=t(HMMTrained$emissionProbs), tpm = HMMTrained$transProbs, ispd = HMMTrained$startProbs ) )
-  print("init log likelihood")
-  print(LogLikInit)
-  print(format(Sys.time(), "%a %b %d %X %Y"))
+   LogLikInit = logLikHmm(sortedSequences, list(Rho=t(HMMTrained$emissionProbs), tpm = HMMTrained$transProbs, ispd = HMMTrained$startProbs ) )
+   print("init log likelihood")
+   print(LogLikInit)
+   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Generating theta-frequent sequences...")
   
   #Firstly, split the sorted sequences
@@ -63,6 +67,7 @@ initialization_phase <- function()
   
   start_parallel_init = Sys.time()
   
+  gc()
   parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
   end_parallel_init = Sys.time()
   

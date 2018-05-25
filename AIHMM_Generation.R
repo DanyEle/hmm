@@ -23,7 +23,7 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 
 run_experiments_workers <- function()
 {
-  amount_workers = c(4, 8, 16, 32, 64, 128, 256)
+  amount_workers = c(64, 32, 16, 8, 4, 2, 128, 256)
   sequential_times = c()
   parallel_times = c()
   overall_times = c()
@@ -37,10 +37,12 @@ run_experiments_workers <- function()
     SEQUENTIAL_TIME <<- 0
     PARALLEL_TIME <<- 0
     
+    gc()
     init = initialization_phase()  
     seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
     par_time =  as.numeric(PARALLEL_TIME, units="secs")
     
+    print(paste("Workers: ", amount ))
     print(paste("Sequential time", as.numeric(seq_time, units="secs")))
     print(paste("Parallel time", as.numeric(PARALLEL_TIME, units="secs")))
     
