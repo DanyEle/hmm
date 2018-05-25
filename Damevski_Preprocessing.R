@@ -8,7 +8,10 @@ FREQUENCY_PRINT = 5000
 
 THRESHOLD_RARE_MSG = 0.03
 
-AMOUNT_WORKERS = 8
+AMOUNT_WORKERS <<- 1
+
+SEQUENTIAL_TIME <<- 0
+PARALLEL_TIME <<- 0
 
 
 #Also overall amount of cores used (virtual + physical)
@@ -46,6 +49,8 @@ load_marked_sequences <- function()
   # sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
   
   
+  start_sequential_damevski = Sys.time()
+  
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo")
   #NEW CODE STARTS HERE. Much less and much more
   #names_size_datasets[[1]] = Vector containing names of all datasets
@@ -61,19 +66,35 @@ load_marked_sequences <- function()
 
   print(paste("Processing", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
   
-  print("Starting parallel")
   
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
-    sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
+    
+  #print("Starting parallel")
+  
+  end_sequential_damevski = Sys.time()
+  
+  SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + (end_sequential_damevski - start_sequential_damevski)
+  
+  start_parallel_damevski = Sys.time()
+  
+  sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
                                       outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
-  print("Finished parallel")
+  end_parallel_damevski = Sys.time()
   
-  print(Sys.time())
+  PARALLEL_TIME <<- PARALLEL_TIME + (end_parallel_damevski - start_parallel_damevski)
+  #print("Finished parallel")
   
+  #print(Sys.time())
+  
+  
+  start_sequential_damevski = Sys.time()
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
+  end_sequential_damevski = Sys.time()
   
+  SEQUENTIAL_TIME = SEQUENTIAL_TIME + (end_sequential_damevski - start_sequential_damevski)
+
   return(list(sequences_marked, sequences_marked_split))
 }
 
@@ -216,6 +237,8 @@ load_filter_dataset_given_name_parallel <- function(dataset_name, outlier_symbol
   
   #Fine, dataset successfully loaded, Now let's start the actual processing of sequences
   return(mark_debug_sessions_with_ID(sampleObs, index))
+  #return(mark_debug_sessions_with_ID(sampleObs, index))
+  
 }
 
 
@@ -241,6 +264,10 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
   
   return(sequences)
 }
+
+
+
+
 
 
 
@@ -287,6 +314,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
       if(cur_timestamp <= last_timestamp + 30)
       {
         sequenceIds[i] = index
+        last_timestamp = cur_timestamp
       }
       #it is not within 30 seconds, then start a new debugging session increasing the index
       else
@@ -294,7 +322,6 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
         index = index + 1
         sequenceIds[i] = index
       }
-      last_timestamp = cur_timestamp
       last_developer = cur_developer
     }
     else
@@ -334,6 +361,8 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
   
   return(sampleObsOutput)	
 }
+
+
 
 
 load_names_size_datasets <- function(folder_datasets)
@@ -452,8 +481,6 @@ find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages
   return(messages_to_remove)
   
 }
-
-
 
 
 
