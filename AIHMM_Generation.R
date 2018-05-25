@@ -20,6 +20,45 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 #FILTER_MOST_FREQUENT_SU  = FALSE
 
 
+
+run_experiments_workers <- function()
+{
+  amount_workers = c(4, 8, 16, 32, 64, 128, 256)
+  sequential_times = c()
+  parallel_times = c()
+  overall_times = c()
+  
+  
+  i = 1
+  for(amount in amount_workers)
+  {
+    print(paste("Starting for ", amount))
+    AMOUNT_WORKERS <<- amount
+    SEQUENTIAL_TIME <<- 0
+    PARALLEL_TIME <<- 0
+    
+    init = initialization_phase()  
+    seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
+    par_time =  as.numeric(PARALLEL_TIME, units="secs")
+    
+    print(paste("Sequential time", as.numeric(seq_time, units="secs")))
+    print(paste("Parallel time", as.numeric(PARALLEL_TIME, units="secs")))
+    
+    parallel_times[i] = par_time
+    sequential_times[i] = seq_time
+    #Where is medieval times?
+    overall_times[i] = par_time + seq_time
+    
+    i = i + 1
+  }
+  
+  return(list(sequential_list, parallel_times, overall_times))
+  
+}
+
+
+
+
 main <- function()
 {
   #sink(paste("hmm_loading_dataset.txt"))

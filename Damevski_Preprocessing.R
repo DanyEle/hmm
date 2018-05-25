@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
@@ -66,6 +66,7 @@ load_marked_sequences <- function()
 
   print(paste("Processing", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
   
+  print("Starting parallel")
   
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
@@ -237,8 +238,6 @@ load_filter_dataset_given_name_parallel <- function(dataset_name, outlier_symbol
   
   #Fine, dataset successfully loaded, Now let's start the actual processing of sequences
   return(mark_debug_sessions_with_ID(sampleObs, index))
-  #return(mark_debug_sessions_with_ID(sampleObs, index))
-  
 }
 
 
@@ -264,10 +263,6 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
   
   return(sequences)
 }
-
-
-
-
 
 
 
@@ -314,7 +309,6 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
       if(cur_timestamp <= last_timestamp + 30)
       {
         sequenceIds[i] = index
-        last_timestamp = cur_timestamp
       }
       #it is not within 30 seconds, then start a new debugging session increasing the index
       else
@@ -322,6 +316,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
         index = index + 1
         sequenceIds[i] = index
       }
+      last_timestamp = cur_timestamp
       last_developer = cur_developer
     }
     else
@@ -361,8 +356,6 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
   
   return(sampleObsOutput)	
 }
-
-
 
 
 load_names_size_datasets <- function(folder_datasets)
@@ -481,6 +474,8 @@ find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages
   return(messages_to_remove)
   
 }
+
+
 
 
 
