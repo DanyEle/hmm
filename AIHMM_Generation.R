@@ -21,42 +21,68 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 
 
 
-run_experiments_workers <- function()
+run_experiment_train_baum_welch <- function()
 {
-  amount_workers = c(64, 32, 16, 8, 4, 2, 128, 256)
-  sequential_times = c()
-  parallel_times = c()
-  overall_times = c()
+  sink("experiment_train_baum_welch_two_states.txt")
   
-  
-  i = 1
-  for(amount in amount_workers)
+  runtimes_list = c()
+  for(i in 1:10)
   {
-    print(paste("Starting for ", amount))
-    AMOUNT_WORKERS <<- amount
-    SEQUENTIAL_TIME <<- 0
-    PARALLEL_TIME <<- 0
+    start_time = Sys.time()
+    unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
+    end_time = Sys.time()
+    seq_time =  as.numeric((end_time - start_time), units="secs")
     
-    gc()
-    init = initialization_phase()  
-    seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
-    par_time =  as.numeric(PARALLEL_TIME, units="secs")
-    
-    print(paste("Workers: ", amount ))
-    print(paste("Sequential time", as.numeric(seq_time, units="secs")))
-    print(paste("Parallel time", as.numeric(PARALLEL_TIME, units="secs")))
-    
-    parallel_times[i] = par_time
-    sequential_times[i] = seq_time
-    #Where is medieval times?
-    overall_times[i] = par_time + seq_time
-    
-    i = i + 1
+    runtimes_list[i] = seq_time
+    print(paste("for i = ", i , " time = ", seq_time))
   }
   
-  return(list(sequential_list, parallel_times, overall_times))
-  
+  return(runtimes_list)
 }
+  
+  run_experiments_workers <- function()
+  {
+    times_return = list()
+    
+    for(j in 1:10)
+    {
+      i = 1
+      
+      amount_workers = c(1, 2, 4, 8, 16, 32, 50, 64)
+      sequential_times = c()
+      parallel_times = c()
+      overall_times = c()
+      
+      for(amount in amount_workers)
+      {
+        print(paste("Starting for ", amount))
+        AMOUNT_WORKERS <<- amount
+        SEQUENTIAL_TIME <<- 0
+        PARALLEL_TIME <<- 0
+        
+        gc()
+        init = initialization_phase()  
+        seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
+        par_time =  as.numeric(PARALLEL_TIME, units="secs")
+        
+        #print(paste("Workers: ", amount ))
+        print(paste(" j = " , j,  " amount of workers = ", amount ,"Sequential time = ", as.numeric(seq_time, units="secs"), "Parallel time", as.numeric(PARALLEL_TIME, units="secs")))
+        
+        parallel_times[i] = par_time
+        sequential_times[i] = seq_time
+        #Where is medieval times?
+        overall_times[i] = par_time + seq_time
+        
+        i = i + 1
+      }
+      
+      times_return[[j]] = list(sequential_times, parallel_times, overall_times)
+      
+    }
+    
+    return(times_return)
+    
+  }
 
 
 

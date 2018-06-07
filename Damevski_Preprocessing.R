@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
@@ -8,7 +8,7 @@ FREQUENCY_PRINT = 5000
 
 THRESHOLD_RARE_MSG = 0.03
 
-AMOUNT_WORKERS <<- 64
+AMOUNT_WORKERS <<- 7
 
 SEQUENTIAL_TIME <<- 0
 PARALLEL_TIME <<- 0
@@ -57,6 +57,7 @@ load_marked_sequences <- function()
   #names_size_datasets[[2]] = Vector containing size of all datasets (in bytes)
   names_size_datasets = load_names_size_datasets(DATA_PATH)
   
+  #Actually, sort by the amount of messages in the dataset
   names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets)
   
   #This is the right scheduling order by decreasing dataset size
@@ -371,9 +372,10 @@ load_names_size_datasets <- function(folder_datasets)
   for (dataset in all_datasets)
   {
     dataset_name = paste(folder_datasets,"/", dataset, sep="")
-
   #  print(file.info(datasetLoaded)$size)
     datasets_names[i] <- dataset_name
+    #dataset_loaded <- read.csv(dataset_name, sep=SEPARATOR, header=T)
+    #datasets_sizes[i] <- length(dataset_loaded$message)
     datasets_sizes[i] <- file.size(dataset_name)
     i = i + 1
   }

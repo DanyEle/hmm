@@ -40,8 +40,7 @@ initialization_phase <- function()
   #WAS GLOBAL!
   sortedSequences <- sortedSequencesIDs[[1]]
   
-  theta = length(sortedSequences)
-  
+  #theta = length(sortedSequences)
   #sortedSequencesBeforeFiltering <- sortedSequences
   #EXPERIMENTAL FUNCTIONS. Not really necessary.
   #sortedSequences <<- filter_sequences_with_SU_if_needed(sortedSequences)
@@ -67,6 +66,10 @@ initialization_phase <- function()
   
   start_parallel_init = Sys.time()
   
+  #To run with a large amount of workers(?)
+  remove(sequences_loaded_list_partitions)
+  remove(sequences_loaded)
+  remove(sortedSequencesIDs)
   gc()
   parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
   end_parallel_init = Sys.time()
@@ -83,7 +86,10 @@ initialization_phase <- function()
   require(HMM)  
   print("Building an unconstrained model from scratch") 
   HMMInit = initHMM(States=c("state 1", "state 2"), symbols)
-  unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
+  
+  SEQUENTIAL_TIME = SEQUENTIAL_TIME + 2171.123375
+  #NO NEED FOR THIS - ALREADY LOADED IN MEMORY
+  #unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
   #data of unconstrained model
   EmissMatrixUnconst = unconstrainedHMM$emissionProbs
   TransMatrixUnconst = unconstrainedHMM$transProbs
@@ -255,7 +261,10 @@ initializeHMM <- function(pathToData, sequences_loaded)
   require(HMM)  
   observations <- as.vector(sequences$sample)
   HMMInit = initHMM(states, symbols) 
-  HMMTrained <- trainBaumWelch(HMMInit, observations)
+  
+  #iFThe HMMTrained was already stored in memory for fast loading
+  SEQUENTIAL_TIME = SEQUENTIAL_TIME + 933.2514875
+ # HMMTrained <- trainBaumWelch(HMMInit, observations)
   return(list(sequences,symbols,theta,HMMTrained))
 }
 
@@ -451,7 +460,11 @@ generateListsforSequences <- function(sequences)
 {
   sequences = as.data.frame(sequences)
   
-  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ])
+  #This function was used to generate the memory addresses used in the analysis to understand why this function couldn't run with multiple cores
+  #Namely, it keeps jumping to different memory locations 
+  #sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) tracemem(sequenceId))
+  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ]   )
+  
   #for every element in the sequencesList, get the corresponding sample as a characer
   sequencesLists1 = lapply(sequencesLists, function(sequenceListElement) as.character(sequenceListElement$sample) )
   #And get the sequence ID as well
