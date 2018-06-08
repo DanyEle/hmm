@@ -87,7 +87,7 @@ initialization_phase <- function()
   print("Building an unconstrained model from scratch") 
   HMMInit = initHMM(States=c("state 1", "state 2"), symbols)
   
-  SEQUENTIAL_TIME = SEQUENTIAL_TIME + 2171.123375
+  SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + 2171.123375
   #NO NEED FOR THIS - ALREADY LOADED IN MEMORY
   #unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
   #data of unconstrained model
@@ -263,7 +263,7 @@ initializeHMM <- function(pathToData, sequences_loaded)
   HMMInit = initHMM(states, symbols) 
   
   #iFThe HMMTrained was already stored in memory for fast loading
-  SEQUENTIAL_TIME = SEQUENTIAL_TIME + 933.2514875
+  SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + 933.2514875
  # HMMTrained <- trainBaumWelch(HMMInit, observations)
   return(list(sequences,symbols,theta,HMMTrained))
 }

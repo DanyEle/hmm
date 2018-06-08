@@ -66,7 +66,7 @@ run_experiment_train_baum_welch <- function()
         par_time =  as.numeric(PARALLEL_TIME, units="secs")
         
         #print(paste("Workers: ", amount ))
-        print(paste(" j = " , j,  " amount of workers = ", amount ,"Sequential time = ", as.numeric(seq_time, units="secs"), "Parallel time", as.numeric(PARALLEL_TIME, units="secs")))
+        print(paste(" j = " , j,  " amount of workers = ", amount ,"Sequential time = ", as.numeric(seq_time, units="secs"), "Parallel time", as.numeric(par_time, units="secs")))
         
         parallel_times[i] = par_time
         sequential_times[i] = seq_time
