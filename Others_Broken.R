@@ -1,5 +1,63 @@
 
 
+run_experiment_theta_frequent <- function(amount_workers)
+{
+  AMOUNT_WORKERS <<- amount_workers
+  runtimes_list = c()
+  
+  for(i in 1:10)
+  {
+    
+    #Firstly, split the sorted sequences
+    #Firstly, take all sortedSequences and find the start and end indexes to split them
+    #start_end_indexes = return_partition_of_data_structure(length(sortedSequences), j)
+    #partitions_sequences_loaded = find_partitions_for_sequences_given_start_end(sortedSequences, start_end_indexes)
+    
+    start_time = Sys.time()
+    
+    sequences_loaded_list_partitions <- load_custom_sequences_if_needed() 
+    
+    
+    # parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = j)
+    
+    end_time = Sys.time()
+    time_spent = end_time - start_time
+    
+    runtimes_list[i] = time_spent
+    
+    print(paste(" i = " , i,  " amount of workers = ", amount_workers ,"Time spent = ", as.numeric(time_spent, units="secs")))
+    
+  }
+  print(runtimes_list)
+  
+  
+}
+
+
+run_experiment_train_baum_welch <- function()
+{
+  sink("experiment_train_baum_welch_two_states.txt")
+  
+  runtimes_list = c()
+  for(i in 1:10)
+  {
+    start_time = Sys.time()
+    unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
+    end_time = Sys.time()
+    seq_time =  as.numeric((end_time - start_time), units="secs")
+    
+    runtimes_list[i] = seq_time
+    print(paste("for i = ", i , " time = ", seq_time))
+  }
+  
+  return(runtimes_list)
+}
+
+
+
+
+
+
 
 getThetaProbableSequencesParallel<-function(HMMTrained, theta){
   #Theta-Probable sequences as global variables

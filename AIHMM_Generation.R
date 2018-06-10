@@ -20,25 +20,6 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 #FILTER_MOST_FREQUENT_SU  = FALSE
 
 
-
-run_experiment_train_baum_welch <- function()
-{
-  sink("experiment_train_baum_welch_two_states.txt")
-  
-  runtimes_list = c()
-  for(i in 1:10)
-  {
-    start_time = Sys.time()
-    unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
-    end_time = Sys.time()
-    seq_time =  as.numeric((end_time - start_time), units="secs")
-    
-    runtimes_list[i] = seq_time
-    print(paste("for i = ", i , " time = ", seq_time))
-  }
-  
-  return(runtimes_list)
-}
   
   run_experiments_workers <- function()
   {

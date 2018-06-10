@@ -292,7 +292,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
   #if a sequence ID is 0, then the sequence is not part of a debugging session
   sequenceIds = c(0*1:nrow(sampleObs))
   
-  print(paste("Marking all the messages in data frame of size", nrow(sampleObs)," with a debug sequence ID in thread", index))
+  print(paste("Marking all the messages in data frame of size", nrow(sampleObs)," with a debug sequence ID"))
 
   time_before_loop = proc.time()
   
