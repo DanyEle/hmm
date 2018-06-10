@@ -1,4 +1,49 @@
 
+run_experiments_workers <- function()
+{
+  times_return = list()
+  
+  for(j in 1:10)
+  {
+    i = 1
+    
+    amount_workers = c(1, 2, 4, 8, 16, 32, 50, 64)
+    sequential_times = c()
+    parallel_times = c()
+    overall_times = c()
+    
+    for(amount in amount_workers)
+    {
+      print(paste("Starting for ", amount))
+      AMOUNT_WORKERS <<- amount
+      SEQUENTIAL_TIME <<- 0
+      PARALLEL_TIME <<- 0
+      
+      gc()
+      init = initialization_phase()  
+      seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
+      par_time =  as.numeric(PARALLEL_TIME, units="secs")
+      
+      #print(paste("Workers: ", amount ))
+      print(paste(" j = " , j,  " amount of workers = ", amount ,"Sequential time = ", as.numeric(seq_time, units="secs"), "Parallel time", as.numeric(par_time, units="secs")))
+      
+      parallel_times[i] = par_time
+      sequential_times[i] = seq_time
+      #Where is medieval times?
+      overall_times[i] = par_time + seq_time
+      
+      i = i + 1
+    }
+    
+    times_return[[j]] = list(sequential_times, parallel_times, overall_times)
+    
+  }
+  
+  return(times_return)
+  
+}
+
+
 
 run_experiment_theta_frequent <- function(amount_workers)
 {
