@@ -201,7 +201,6 @@ displaySymbolsPerState <- function(HMMTrained)
 #To pre-process the dataset and train HMM. It computes theta
 initializeHMM <- function(pathToData, sequences_loaded)
 {   
-  
   #alternative code in case the set does not contain sequence IDs
   
   if(LOAD_CUSTOM_SEQUENCES == FALSE)

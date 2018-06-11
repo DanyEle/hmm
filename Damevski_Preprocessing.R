@@ -301,7 +301,14 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
     cur_developer = sampleObs$developer[i]
     
     #We have a match. Now check if the timestamp of the current sequence is within 30 seconds of the last one
-    if(i %in% indexes_matches)
+    if(cur_developer != last_developer)
+    {
+      index = index + 1
+      sequenceIds[i] = index
+      last_timestamp = cur_timestamp
+      last_developer = cur_developer 
+    }
+    else if(i %in% indexes_matches)
     {
       sequenceIds[i] = index
       
