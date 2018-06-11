@@ -827,17 +827,30 @@ sortSequencesByInterestingness <- function(interestingSequences){
   return (list(newInterestingConditionTypes, newInterestingSequences, newInterestingInterestingness))
 }
 
-selectSymbolsTopKInterestingSequences <- function(intersection, q, k)
+selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained)
 {
-  toMoveSymbolsUnion <- c()   
-  
-  for(i in 1:k)
+  #Apply a reduce to the intersection
+  amount_valid_symbols = length(unlist(intersection))
+  print(amount_valid_symbols)
+  print(unlist(intersection))
+
+  if(amount_valid_symbols == 0)
   {
-    toMoveSymbolsCur <- unlist(intersection[which(!q==TRUE)[[i]]])
-    toMoveSymbolsUnion <- union(toMoveSymbolsUnion, toMoveSymbolsCur)
+    print("Stopping process. No new symbols in the interesting sequences can be constrained to the new state. ")
+    print(HMMTrained)
+    return(list(intersection, FALSE))
   }
-  
-  return(toMoveSymbolsUnion)
+  else
+  {
+    toMoveSymbolsUnion <- c()   
+    
+    for(i in 1:k)
+    {
+      toMoveSymbolsCur <- unlist(intersection[which(!q==TRUE)[[i]]])
+      toMoveSymbolsUnion <- union(toMoveSymbolsUnion, toMoveSymbolsCur)
+    }
+    return(list(toMoveSymbolsUnion, TRUE))
+  }
 }
 
 

@@ -27,7 +27,7 @@ LOAD_CUSTOM_SEQUENCES: TRUE if you want to specify your own dataset(s) with cust
 ## AIHMM_Generation.R
 Given a certain range of k (the amount of interesting sequences to consider), this script automatically generates Hidden Markov Models by constraining all symbols not previously constrained on previous states onto the newly added state. It does so by considering all symbols in the generated top k interesting sequences. (for example, setting k = 5, the script will generate AIHMMs with 1,2,3,4,5 interesting sequences)..
 
-## Steps for Damevski dataset processing (only initialization phase)
+### Steps for Damevski dataset initialization phase - Running an experiment
 1. Navigate to a folder where you'll be hosting the R project. 
 EX: cd HMM or mkdir HMM
 2. Place the datasets desired in the "Datasets_Damevski_Small" folder or set the variable "DATA_PATH" in Damevski_Preprocessing.R
@@ -46,8 +46,19 @@ sink("file_name.txt")
 7.  Run the following command to let the initialization phase begin, passing the amount of workers to be used as a parameter of the function call.  \footnote{If wanting to run the script on a local machine, further details can be found in the Readme file at \url{https://github.com/DanyEle/hmm/blob/master/README.md}}
 run_experiment_workers(N)
 	   
+	   
+###Steps for Damevski dataset initialization and iterative phase
+1. See bullets (1), (2), (3), (4) and (5), (6) of the steps for Damevski dataset initialization phase
+2. 
+	a. Invoke the main function, running the AIHMM construction phase for k = 1,2,3,4,5, where k is the amount of interesting sequences to consider.
+main()
+	b. If just wanting to run the AIHMM construction phase for a specific k (ex: k = 1)
+		  init = initialization_phase()  
+		  k <- 1
+		  loopOverSequenceSet(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
+
 					   
-## IIHMM_generation.R
+# IIHMM_generation.R
 This script allows for the creation of Hidden Markov Models iteratively, namely adding a state per iteration and constraining a set of hand-picked symbols onto the newly added state.
 
 ## Steps

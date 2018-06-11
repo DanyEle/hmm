@@ -23,8 +23,6 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 
 
 
-
-
 run_experiment_workers <- function(amount_workers)
 {
       print(paste("Starting initialization phase for amount of workers = ", amount_workers))
@@ -60,7 +58,7 @@ main <- function()
  
   while(k <= 5)
   {
-    sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
+    #sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
     loopOverSequenceSet(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
@@ -71,8 +69,8 @@ main <- function()
 
 
 
-loopOverSequenceSet <- function(pathToData, k,    HMMTrained, thetaFrequentSequences, theta, logLikCur, sequences, sortedSequences, LogLikUnconst){
-      
+loopOverSequenceSet <- function(pathToData, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
+{
     continue=TRUE
     i = 1
   
@@ -88,9 +86,10 @@ loopOverSequenceSet <- function(pathToData, k,    HMMTrained, thetaFrequentSeque
     	print("Generating and sorting interesting sequences")
 
     	#it returns: [[1]]=conditionType [[2]] interesting sequences [[3]] interestingness. TODO: extract the uninteresting sequences
-    	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
-    	interestingSequences = combine_partitions_interesting_sequences(interestingSequencesParts)
-    	#interestingSequencesSequential<-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
+    	#Parallel version is currently not working properly!
+    	#interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
+    	#interestingSequences = combine_partitions_interesting_sequences(interestingSequencesParts)
+    	interestingSequences<-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
       	      	
     	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
     	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)     	
@@ -104,32 +103,36 @@ loopOverSequenceSet <- function(pathToData, k,    HMMTrained, thetaFrequentSeque
 		  intersection<-as.vector(sapply(sortedInterestingSequences[[2]],function(x)intersect(unlist(x),names(allDataEP[which(!allDataEP==0)]))))
 		  q<-unlist(lapply(intersection,`all.equal`,character(0)))		
 		  
-		  toMoveSymbols <- selectSymbolsTopKInterestingSequences(intersection, q, k)
-
-    	print(toMoveSymbols)   
-    	
-    	newState<-paste("State_",i)     	
-    	#Build the HMM with the new states and the symols to move in. It returns: [[1]] the HMM with new state, [[2]] the symbols to move (toMoveSymbols), [[3]] the nr of states, and [[4]]the Model Loglikelihood 
-    	
-    	#sequences<-sequencesIDs[[1]]
-    	newStateHMMConstrained <-newStateHMMTrainingConstrained(newState, toMoveSymbols, HMMTrained, sortedSequences, sequences$sample, LogLikUnconst)  
-    	
-    	LogLikConstrained<-newStateHMMConstrained[[4]]
-
-    	#compare the current loglikelihood with previsous model's one. The loglikelihood should increase with iterations otherwise the process stops. 
-    	# It returns: continue = FALSE or TRUE to be used for looping
-    	#continue = FALSE --> Do not continue! Model quality has degraded or no interesting sequences have been found
-    	#continue = TRUE --> Do continue! Model quality has increased and interesting sequences have been found
-    	
-    	#Check if a continue was already present, resulting from the log-likelihood of the newly constructed and constrained model being lower than
-    	#the log-likelihood of an unconstrained model
-    	continue <- newStateHMMConstrained[[5]]
-    	if(continue == TRUE)
-    	{
-    	  #Compare current log-likelihood with the one of the previous iteration
-    	  continue <- compareModelLogLikelihoodAtIteration(LogLikCur, LogLikConstrained)
-    	  
-    	}
+		  moveSymbolsContinue <- selectSymbolsTopKInterestingSequences(intersection, q, k, HMMTrained)
+		  
+		  toMoveSymbols = moveSymbolsContinue[[1]]
+		  continue = moveSymbolsContinue[[2]]
+		  
+      if(continue == TRUE)		  
+      {
+      	newState<-paste("State_",i)     	
+      	#Build the HMM with the new states and the symols to move in. It returns: [[1]] the HMM with new state, [[2]] the symbols to move (toMoveSymbols), [[3]] the nr of states, and [[4]]the Model Loglikelihood 
+      	
+      	#sequences<-sequencesIDs[[1]]
+      	newStateHMMConstrained <-newStateHMMTrainingConstrained(newState, toMoveSymbols, HMMTrained, sortedSequences, sequences$sample, LogLikUnconst)  
+      	
+      	LogLikConstrained<-newStateHMMConstrained[[4]]
+  
+      	#compare the current loglikelihood with previsous model's one. The loglikelihood should increase with iterations otherwise the process stops. 
+      	# It returns: continue = FALSE or TRUE to be used for looping
+      	#continue = FALSE --> Do not continue! Model quality has degraded or no interesting sequences have been found
+      	#continue = TRUE --> Do continue! Model quality has increased and interesting sequences have been found
+      	
+      	#Check if a continue was already present, resulting from the log-likelihood of the newly constructed and constrained model being lower than
+      	#the log-likelihood of an unconstrained model
+      	continue <- newStateHMMConstrained[[5]]
+      	if(continue == TRUE)
+      	{
+      	  #Compare current log-likelihood with the one of the previous iteration
+      	  continue <- compareModelLogLikelihoodAtIteration(LogLikCur, LogLikConstrained)
+      	  
+      	}
+      }
     	
     	
     	print(format(Sys.time(), "%a %b %d %X %Y"))
@@ -155,7 +158,7 @@ loopOverSequenceSet <- function(pathToData, k,    HMMTrained, thetaFrequentSeque
     #print(HMMTrained) 
     print(paste("Final Log Likelihood = ", LogLikCur))
     print(paste("Log Likelihood unconstrained = ", LogLikUnconst))
-    print(paste("Final Amount of states = " , nrStates))
+    print(paste("Final Amount of states = " , length(HMMTrained$States)))
     displaySymbolsPerState(HMMTrained)
     
     print(paste("DONE in function for k=", k))
