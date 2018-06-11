@@ -1,4 +1,4 @@
-DATA_PATH = "Datasets_Damevski_Small" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
 INFO_PATH = "Info_Dataset" #Contains set of unique actions
 
 SEPARATOR = ","
@@ -270,7 +270,6 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
 
 mark_debug_sessions_with_ID <- function(sampleObs, index){
   
-  
   print(paste("Processing partition of size", nrow(sampleObs)))
   
   index_initial = index
@@ -325,7 +324,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
       #no match. again, check if the timestamp is within 30 seconds from the last action in the debugging session
       
       #is within it, then assign the sequence ID to the current action
-      if( (cur_timestamp <= last_timestamp + 30) && (cur_developer == last_developer))
+      if( (cur_timestamp <= last_timestamp + 30))
       {
         sequenceIds[i] = index
       }
@@ -353,7 +352,7 @@ bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View
   last_sequence_id = sampleObsOutput$SequenceID[nrow(sampleObsOutput)]
   amount_sequences = last_sequence_id - index_initial + 1
   
- # print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
+  print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
   
   return(sampleObsOutput)	
 }
