@@ -21,38 +21,12 @@ PARALLEL_TIME <<- 0
 #######################
 load_marked_sequences <- function()
 {
-  #1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
-  #[[1]] = all unique developers
-  #[[2]] = all unique messages corresponding to the developer
- # print("Starting sequential")
- # print(Sys.time())
-  #Sequential 
-  # list_devs_messages = load_unique_messages_for_developers(DATA_PATH)
-  #Array of messages, sequential
-  # all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
-  #No rare messages found for the full dataset. No need to invoke this function as well. 
-  #messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages) #NOT USED!
-  # messages_to_remove = c()
-  #2: Remove cursor movement messages (too frequent) and rare messages identified above from the full dataset loaded
-  #We may omit passing messages_to_remove, because no rare messages were actually identified.
-  #Also load the timestamp and the developer id, alongside the message
-  #datasetAndPositions[[1]] = overall dataset containing all the observations. 
-  #datasetAndPositions[[2]] = contains start and end position of each dataset
-  # dataset_and_positions = load_and_filter_dataset(list_devs_messages, messages_to_remove = messages_to_remove, DATA_PATH)
-  # sampleObs = dataset_and_positions[[1]]
-  # startEndVectors = dataset_and_positions[[2]]
-  #As long as the amount of datasets used
-  # start_indexes_datasets = startEndVectors[[1]]
-  # end_indexes_datasets = startEndVectors[[2]]
-  # partitions = create_partitions_for_workers(start_indexes_datasets, end_indexes_datasets, sampleObs)
-  # indexes = find_indices_for_partitions(partitions)
-  # sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
-  
-  
   start_sequential_damevski = Sys.time()
   
-  messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo")
-  #NEW CODE STARTS HERE. Much less and much more
+  messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo", "View.File",  "Debug.Debug Break Mode",
+            "Debug.Debug Run Mode",  "Debug.DebugType", "Debug.Enter Design Mode" ,"Build.BuildDone", "Build.BuildBegin")
+  
+  #NEW CODE STARTS HERE. Much less and much more effective
   #names_size_datasets[[1]] = Vector containing names of all datasets
   #names_size_datasets[[2]] = Vector containing size of all datasets (in bytes)
   names_size_datasets = load_names_size_datasets(DATA_PATH)
@@ -72,23 +46,17 @@ load_marked_sequences <- function()
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
     
-  #print("Starting parallel")
-  
   end_sequential_damevski = Sys.time()
-  
   SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + (end_sequential_damevski - start_sequential_damevski)
-  
   start_parallel_damevski = Sys.time()
   
   sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
                                       outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
   end_parallel_damevski = Sys.time()
-  
   PARALLEL_TIME <<- PARALLEL_TIME + (end_parallel_damevski - start_parallel_damevski)
   #print("Finished parallel")
   
   #print(Sys.time())
-  
   
   start_sequential_damevski = Sys.time()
   #Now merge the different partitions into one data table
@@ -275,12 +243,14 @@ mark_debug_sessions_with_ID <- function(sampleObs, index){
   index_initial = index
   
   #List of messages representing interactions of developers with Visual Studio IDE for debugging
-  msgs_IDE_interactions = ('^View.Locals|Dbug.QuickWatch|Debug.AddWatch|Debug.StepOver|Debug.StepInto|Debug.StepOut|De-
-bug.SetNextStatement|Debug.RunToCursor|View.ImmediateWindow|Debug.Immediate|View.CallStack|Debug.CallStack|View.Autos|View.Output|Debug.Output
-                           |Debug.StopDebugging|Debug.Start|Debug.StartDebugTarget|TestExplorer.DebugSelectedTests|Debug.Restart|Debug.AttachtoProcess|
-                           TestExplorer.DebugAllTestsInContext|TestExplorer.DebugAllTests|View.SolutionExplorer|Debug.ToggleBreakpoint|Debug.EnableBreakpoint|
-                           View.FindandReplace|View.FindResults1|View.SandoSearch|Edit.FindinFiles|Edit.GoToDefinition|View.FindSymbolResults|
-                           Edit.FindAllReferences|ReSharper.ReSharper.GotoDeclaration|Edit.NavigateTo|ReSharper.ReSharper.FindUsages|Edit.GoToDeclaration|View.CallHierarchy$')
+  msgs_IDE_interactions = ('^Debug.ToggleBreakpoint|Debug.CallStack|View.Call Stack|Debug.Start|Debug.StepOver|Debug.StepInto|Debug.StepOut|
+                           Debug.AttachtoProcess|Debug.StartDebugTarget|Debug.StopDebugging|Debug.QuickWatch|Debug.AddWatch|View.Watch 1|
+                           Debug.DisableAllBreakpoints|Debug.DetachAll|Debug.Restart|Debug.RunToCursor|Debug.EnableAllBreakpoints|
+                           Debug.ShowNextStatement|Debug.BreakatFunction|Debug.StartPerformanceAnalysis|Debug.AddParallelWatch|
+                           Debug.Threads|Debug.Disassembly|Debug.GoToDisassembly|Debug.EvaluateStatement|Debug.SetNextStatement|
+                           Debug.Exceptions|Debug.BreakAll|Debug.Breakpoints|Debug.AddParallelWatch|Debug.Watch1|Debug.Modules|
+                           Debug.Output|Debug.Print|Debug.DeleteAllBreakpoints|TestExplorer.DebugSelectedTests|
+                           TestExplorer.DebugAllTestsInContext|TestExplorer.DebugAllTests|View.Locals$')
   
   
   indexes_matches <-grep(pattern=msgs_IDE_interactions, sampleObs$sample, invert=F)
@@ -486,81 +456,5 @@ find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages
 
 
 
-
-
-load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c(), folder_datasets)
-{
-  messages_to_remove = c(messages_to_remove, "View.OnChangeCaretLine", "View.OnChangeScrollInfo")
-  
-  all_datasets = list.files(path=folder_datasets)
-  
-  start_dataset = c()
-  end_dataset = c()
-  
-  print(paste("Loading all datasets in the folder ", folder_datasets))
-  i = 1
-  messages_loaded = c()
-  timestamps_loaded = c()
-  developers_loaded = c()
-  
-  start = 1
-  
-  for (dataset in all_datasets)
-  {
-    print(paste("Loading dataset from: ", dataset))
-    dataLoaded <- read.csv(paste(folder_datasets,"/", dataset, sep=""), sep=SEPARATOR, header=T)
-    timestamps_loaded_remove_symbols = as.array(dataLoaded$timestamp)
-    developers_loaded_remove_symbols = as.array(dataLoaded$developer_id)
-    messages_loaded_remove_symbols = as.array(dataLoaded$message)
-    
-    messages_filtered = messages_loaded_remove_symbols
-    timestamps_filtered  = timestamps_loaded_remove_symbols
-    developers_filtered = developers_loaded_remove_symbols
-    
-
-    #Here, actually filter out the symbols to remove
-    for (message in messages_to_remove)
-    {
-      timestamps_filtered = timestamps_filtered[which(messages_filtered != message)]
-      developers_filtered = developers_filtered[which(messages_filtered != message)]
-      messages_filtered = messages_filtered[which(messages_filtered != message)]
-    }
-    
-    messages_loaded[[i]] = messages_filtered
-    timestamps_loaded[[i]] = timestamps_filtered
-    developers_loaded[[i]] = developers_filtered
-    
-    amount_symbols_removed = nrow(messages_loaded_remove_symbols) - nrow(messages_filtered)
-    
-    
-    #assign start and end of each dataset over here, subtracting the amount of symbols removed to properly set the end
-    start_dataset[i] = start
-    end_dataset[i] = start + nrow(as.array(dataLoaded$message)) - 1 - amount_symbols_removed
-    
-    print(paste("i " , i , " start = ", start_dataset[i], " end = ", end_dataset[i]))
-    
-    start = end_dataset[i] + 1
-    
-    i = i + 1
-  }
-  
-  print("Merging datasets into a single data structure")
-  #Now combine the three lists as columns of a single data frame, flattening them at the same time. Access them like:
-  #sequences$sample, sequences$timestamp, sequences$developer
-  sequences = do.call(rbind, Map(data.frame, sample=messages_loaded, timestamp=timestamps_loaded, developer=developers_loaded))
-  
-  #start_end_list[[1]] = array containing the start indexes of all datasets.
-  #start_end_list[[2]] = array containing the end indexes of all datasets
-  start_end_list = list(start_dataset, end_dataset)
-  
-  print(paste("Merged dataset has ", length(sequences$sample), " messages.", sep=""))
-  
-  
-  return(list(sequences, start_end_list))
-  
-  #use functions display_symbols_occurrences and display_symbols_frequency to see how symbols' occurrences are distributed, if necessary
-  #display_symbols_occurrences(sample)
-  #display_symbols_frequency(sample)
-}
 
 

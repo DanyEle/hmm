@@ -368,3 +368,116 @@ generateHMMSequencesIterationParallel <- function(HMMTrained, sequence, forwardP
   
 }  
 
+
+##FROM DAMEVSKI_PREPROCESSING.R
+
+load_marked_sequences_old <- function()
+{
+  #1: Filter extremely rare messages (messages occurring in less than 3% of the developers)
+  #[[1]] = all unique developers
+  #[[2]] = all unique messages corresponding to the developer
+  # print("Starting sequential")
+  # print(Sys.time())
+  #Sequential 
+  # list_devs_messages = load_unique_messages_for_developers(DATA_PATH)
+  #Array of messages, sequential
+  # all_unique_messages = load_all_existing_unique_messages(INFO_PATH, list_devs_messages)
+  #No rare messages found for the full dataset. No need to invoke this function as well. 
+  #messages_to_remove = find_extremely_rare_messages(list_devs_messages, all_unique_messages) #NOT USED!
+  # messages_to_remove = c()
+  #2: Remove cursor movement messages (too frequent) and rare messages identified above from the full dataset loaded
+  #We may omit passing messages_to_remove, because no rare messages were actually identified.
+  #Also load the timestamp and the developer id, alongside the message
+  #datasetAndPositions[[1]] = overall dataset containing all the observations. 
+  #datasetAndPositions[[2]] = contains start and end position of each dataset
+  # dataset_and_positions = load_and_filter_dataset(list_devs_messages, messages_to_remove = messages_to_remove, DATA_PATH)
+  # sampleObs = dataset_and_positions[[1]]
+  # startEndVectors = dataset_and_positions[[2]]
+  #As long as the amount of datasets used
+  # start_indexes_datasets = startEndVectors[[1]]
+  # end_indexes_datasets = startEndVectors[[2]]
+  # partitions = create_partitions_for_workers(start_indexes_datasets, end_indexes_datasets, sampleObs)
+  # indexes = find_indices_for_partitions(partitions)
+  # sequences_marked_split = mcmapply(mark_debug_sessions_with_ID, sampleObs = partitions, index = indexes, mc.cores = AMOUNT_WORKERS) 
+  
+}
+
+
+####NB: OBSOLETE METHOD. NO LONGER USED IN THE CURRENT VERSION!
+load_and_filter_dataset <- function(list_devs_messages, messages_to_remove = c(), folder_datasets)
+{
+  #Useless, if passing symbols to remove already as input
+  #messages_to_remove = c(messages_to_remove, "View.OnChangeCaretLine", "View.OnChangeScrollInfo")
+  
+  all_datasets = list.files(path=folder_datasets)
+  
+  start_dataset = c()
+  end_dataset = c()
+  
+  print(paste("Loading all datasets in the folder ", folder_datasets))
+  i = 1
+  messages_loaded = c()
+  timestamps_loaded = c()
+  developers_loaded = c()
+  
+  start = 1
+  
+  for (dataset in all_datasets)
+  {
+    print(paste("Loading dataset from: ", dataset))
+    dataLoaded <- read.csv(paste(folder_datasets,"/", dataset, sep=""), sep=SEPARATOR, header=T)
+    timestamps_loaded_remove_symbols = as.array(dataLoaded$timestamp)
+    developers_loaded_remove_symbols = as.array(dataLoaded$developer_id)
+    messages_loaded_remove_symbols = as.array(dataLoaded$message)
+    
+    messages_filtered = messages_loaded_remove_symbols
+    timestamps_filtered  = timestamps_loaded_remove_symbols
+    developers_filtered = developers_loaded_remove_symbols
+    
+    
+    #Here, actually filter out the symbols to remove
+    for (message in messages_to_remove)
+    {
+      timestamps_filtered = timestamps_filtered[which(messages_filtered != message)]
+      developers_filtered = developers_filtered[which(messages_filtered != message)]
+      messages_filtered = messages_filtered[which(messages_filtered != message)]
+    }
+    
+    messages_loaded[[i]] = messages_filtered
+    timestamps_loaded[[i]] = timestamps_filtered
+    developers_loaded[[i]] = developers_filtered
+    
+    amount_symbols_removed = nrow(messages_loaded_remove_symbols) - nrow(messages_filtered)
+    
+    
+    #assign start and end of each dataset over here, subtracting the amount of symbols removed to properly set the end
+    start_dataset[i] = start
+    end_dataset[i] = start + nrow(as.array(dataLoaded$message)) - 1 - amount_symbols_removed
+    
+    print(paste("i " , i , " start = ", start_dataset[i], " end = ", end_dataset[i]))
+    
+    start = end_dataset[i] + 1
+    
+    i = i + 1
+  }
+  
+  print("Merging datasets into a single data structure")
+  #Now combine the three lists as columns of a single data frame, flattening them at the same time. Access them like:
+  #sequences$sample, sequences$timestamp, sequences$developer
+  sequences = do.call(rbind, Map(data.frame, sample=messages_loaded, timestamp=timestamps_loaded, developer=developers_loaded))
+  
+  #start_end_list[[1]] = array containing the start indexes of all datasets.
+  #start_end_list[[2]] = array containing the end indexes of all datasets
+  start_end_list = list(start_dataset, end_dataset)
+  
+  print(paste("Merged dataset has ", length(sequences$sample), " messages.", sep=""))
+  
+  
+  return(list(sequences, start_end_list))
+  
+  #use functions display_symbols_occurrences and display_symbols_frequency to see how symbols' occurrences are distributed, if necessary
+  #display_symbols_occurrences(sample)
+  #display_symbols_frequency(sample)
+}
+
+
