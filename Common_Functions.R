@@ -421,7 +421,7 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   library("parallel")
   library("purrr")
   #convert partitions into data frame
-  parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=7)
+  parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
   sequencesLists = flatten(parts_lists[1, ])
   sequencesLists1 = flatten(parts_lists[2, ])
