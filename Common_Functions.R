@@ -61,10 +61,9 @@ initialization_phase <- function()
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Generating theta-frequent sequences...")
   
-  
   #Firstly, split the sorted sequences
   #Firstly, take all sortedSequences and find the start and end indexes to split them
-  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), AMOUNT_WORKERS)
+  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), 1) #AMOUNT_WORKERS
   partitions_sequences_loaded = find_partitions_for_sequences_given_start_end(sortedSequences, start_end_indexes)
   
   end_sequential_init = Sys.time()
@@ -78,7 +77,9 @@ initialization_phase <- function()
   remove(sequences_loaded)
   remove(sortedSequencesIDs)
   gc()
-  parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
+  parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = 1)
+  #parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
+  
   end_parallel_init = Sys.time()
   
   PARALLEL_TIME <<- PARALLEL_TIME + (end_parallel_init - start_parallel_init)
@@ -640,7 +641,7 @@ generateHMMSequencesIterationParallel <- function(HMMTrained, sequence, forwardP
 
 
 
-#
+
 #VERIFIED. REMOVED "Observation" and "sortedSequences" as parameters
 computeSequenceInterestingness <- function(sequence, thetaFrequentSequences, thetaProbableSequences, HMMTrained, thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta){
   #now, we need to distinguish among 3 cases:
