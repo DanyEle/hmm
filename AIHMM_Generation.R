@@ -22,16 +22,22 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 
 
 
+#source("Damevski_Preprocessing.R")
+#source("Common_Functions.R")
+#source("AIHMM_Generation.R")
 
-run_experiment_workers <- function(amount_workers)
+#N = INT. parallelism degree (i.e: amount of cores to be used)
+#output_to_file = BOOLEAN. TRUE - Output to a file
+#                          FALSE - Output to the console
+#run_experiment_workers(N, boolean)
+#Used to run the initialization phase, followed by the iterative phase with the amount of workers needed
+run_experiment_workers <- function(amount_workers, output_to_file)
 {
       print(paste("Starting initialization phase for amount of workers = ", amount_workers))
       AMOUNT_WORKERS <<- amount_workers
       SEQUENTIAL_TIME <<- 0
       PARALLEL_TIME <<- 0
-      
-      gc()
-      init = initialization_phase()  
+      main(output_to_file)
       seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
       par_time =  as.numeric(PARALLEL_TIME, units="secs")
       overall_time = seq_time + par_time
@@ -39,28 +45,33 @@ run_experiment_workers <- function(amount_workers)
       print(paste("For amount of workers = ", amount_workers, "Overall time = ",  overall_time ,"Sequential time = ", as.numeric(seq_time, units="secs"), "Parallel time", as.numeric(par_time, units="secs")))
 } 
 
-main <- function()
+main <- function(output_to_file)
 {
   
   #In the initialization phase, we pre-process the dataset and create the initial HMM based on the found observations,
   #passing the so generated HMM to the iterative phase.
-  
-  #sink(paste("hmm_loading_dataset.txt"))
+  if(output_to_file == TRUE)
+  {
+    sink(paste("hmm_initialization_phase", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
+  }
   #sink()
   init = initialization_phase()  
   
-  # HMMTrained = init[[1]]
-  # thetaFrequentSequences = init[[2]]
-  # theta = init[[3]]
-  # logLikCur = init[[4]]
-  # sequences = init[[5]]
-  # sortedSequences = init[[6]]
-  # LogLikUnconst = init[[7]]
+  HMMTrained = init[[1]]
+  thetaFrequentSequences = init[[2]]
+  theta = init[[3]]
+  logLikCur = init[[4]]
+  sequences = init[[5]]
+  sortedSequences = init[[6]]
+  LogLikUnconst = init[[7]]
   
   k <- 1
   while(k <= 5)
   {
-    #sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
+    if(output_to_file == TRUE)
+    {
+      sink(paste("hmm_iterative_phase_with_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
+    }
     iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
@@ -164,7 +175,7 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     print(paste("Final Amount of states = " , length(HMMTrained$States)))
     displaySymbolsPerState(HMMTrained)
     
-    print(paste("DONE in function for k=", k))
+    print(paste("DONE in function for k =", k))
 }
 
 filter_sequences_with_SU_if_needed <- function(sortedSequences)

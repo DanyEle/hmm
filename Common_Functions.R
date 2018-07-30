@@ -766,12 +766,12 @@ return_more <- function(more)
 #Output: the score for all input sequences
 computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, thetaProbableSequences, HMMTrained, theta, amount_workers){	
   #stores the case from that the score was computed.
-  conditionTypes = vector()
+  #conditionTypes = vector()
   #stores sequences whose score has been computed
-  interestingSequences = list()
+  #interestingSequences = list()
   #stores the scores for the sequences.
-  interestingnessValues = vector()
-  h = 1
+  #interestingnessValues = vector()
+  #h = 1
   
   #Partition ThetaSequencesUnion and process each chunk separately
   # set operations
@@ -802,6 +802,13 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
 compute_interestingness_per_partition <- function(partition_theta_union, thetaFrequentSequences, thetaProbableSequences,
                                                   thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta)
 {
+  conditionTypes = vector()
+  #stores sequences whose score has been computed
+  interestingSequences = list()
+  #stores the scores for the sequences.
+  interestingnessValues = vector()
+  h = 1
+  
   print(length(partition_theta_union))
   #loop through all sequences that belong either to Theta-Frequent or to Theta-Probable.
   for(i in 1:length(partition_theta_union)){
