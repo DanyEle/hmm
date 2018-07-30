@@ -1,5 +1,7 @@
-DATA_PATH = "Datasets_Damevski_Sample" #NB: There should be no other file in this folder other than the datasets to load
-INFO_PATH = "Info_Dataset" #Contains set of unique actions
+#Daniele Gadler, Andrea Janes, Barbara Russo
+#Free University of Bolzano-Bozen 2016-2018
+
+DATA_PATH = "Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
 
 SEPARATOR = ","
 
@@ -401,14 +403,6 @@ load_unique_messages_for_developers <- function(folder_datasets)
 }
 
 
-load_all_existing_unique_messages <- function(INFO_PATH, list_devs_messages)
-{
-  dataset = "MessageList.csv"
-  #Load all the unique messages now
-  dataLoaded <- read.csv(paste(INFO_PATH,"/", dataset, sep=""), sep=SEPARATOR, header=T)
-  return(as.array(dataLoaded$message))
-  
-}
 
 
 #all_unique_messages: Array containing all the unique messages that can possibly occur in the dataset

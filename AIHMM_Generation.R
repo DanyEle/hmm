@@ -1,5 +1,5 @@
 #Daniele Gadler, Andrea Janes, Barbara Russo
-#Free University of Bolzano-Bozen 2016-2017
+#Free University of Bolzano-Bozen 2016-2018
 
 #pathToData is used only from the script not making use of Damevski et al's dataset
 #pathToData <- "~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_ID.csv"
