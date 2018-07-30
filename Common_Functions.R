@@ -34,8 +34,12 @@ initialization_phase <- function()
   #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. 
   list_partitions_sequences = find_list_partitions_given_data_frame_partitions(partitions_sequences_loaded)
   
+  time_before = Sys.time()
   #Not really parallel. Only uses 1 worker, but multiple partitions. 
   sortedSequencesIDs <- sortSequencesWithIDs(list_partitions_sequences)
+  time_after = Sys.time()
+  
+  time_spent = time_after - time_before
   
   #WAS GLOBAL!
   sortedSequences <- sortedSequencesIDs[[1]]
@@ -49,14 +53,12 @@ initialization_phase <- function()
    print("Computing loglikelihood for ALL DATA state")
   #compute the loglikelihood of the model with one state
   library("hmm.discnp")
-   LogLikInit = logLikHmm(sortedSequences, list(Rho=t(HMMTrained$emissionProbs), tpm = HMMTrained$transProbs, ispd = HMMTrained$startProbs ) )
-   print("init log likelihood")
-   print(LogLikInit)
-   print(format(Sys.time(), "%a %b %d %X %Y"))
+  #Generates a warning, but no problem!
+  LogLikInit = logLikHmm(sortedSequences, list(Rho=t(HMMTrained$emissionProbs), tpm = HMMTrained$transProbs, ispd = HMMTrained$startProbs ) )
+  print("init log likelihood")
+  print(LogLikInit)
+  print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Generating theta-frequent sequences...")
-  
-  
-  
   
   
   #Firstly, split the sorted sequences
@@ -98,12 +100,9 @@ initialization_phase <- function()
   EmissMatrixUnconst = unconstrainedHMM$emissionProbs
   TransMatrixUnconst = unconstrainedHMM$transProbs
   StartProbsUnconst = unconstrainedHMM$startProbs 
+  #Generates a warning, but no problem!
   LogLikUnconst = logLikHmm(sortedSequences, list(Rho=t(EmissMatrixUnconst), tpm =  TransMatrixUnconst, ispd = StartProbsUnconst ) )
   print(paste("Loglik of unconstrained model with same nr of states: ", LogLikUnconst))
-  
-  #By observing each top interesting sequence per time, which is not already contained in the existing states, e
-  #xtract the symbols for the next state.  Build the newState model and compare the loglikelihood with the previous model. Loop until the loglikelihood is not increasing.	
-
   #Was global!!  
   LogLikCur<-LogLikInit
   
@@ -154,9 +153,14 @@ combine_partitions_interesting_sequences <-function(interestingSequencesParts)
 {
   library(purrr)
   list_return = list()
+  #Ok
   list_return[[1]] = unlist(flatten(interestingSequencesParts[1, ]))
-  list_return[[2]] = unlist(flatten(interestingSequencesParts[2, ]))
+  #Not okay
+  list_return[[2]] = flatten(interestingSequencesParts[2, ])
+  #Ok
   list_return[[3]] = unlist(flatten(interestingSequencesParts[3, ]))
+  
+  print(paste("Amount of interesting sequences found is ", length(list_return[[3]])))
   
   return(list_return)
 }
@@ -417,7 +421,7 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   library("parallel")
   library("purrr")
   #convert partitions into data frame
-  parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
+  parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=7)
   
   sequencesLists = flatten(parts_lists[1, ])
   sequencesLists1 = flatten(parts_lists[2, ])
@@ -467,8 +471,9 @@ generateListsforSequences <- function(sequences)
   #This function was used to generate the memory addresses used in the analysis to understand why this function couldn't run with multiple cores
   #Namely, it keeps jumping to different memory locations 
   #sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) tracemem(sequenceId))
-  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ]   )
   
+  #sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) tracemem(sequenceId))
+  sequencesLists = lapply(unique(sequences$SequenceID), function(sequenceId) sequences[sequences$SequenceID==sequenceId, ]   )
   #for every element in the sequencesList, get the corresponding sample as a characer
   sequencesLists1 = lapply(sequencesLists, function(sequenceListElement) as.character(sequenceListElement$sample) )
   #And get the sequence ID as well
@@ -787,7 +792,7 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
                                        thetaFrequentSequences=replicate(amount_workers, thetaFrequentSequences, FALSE), 
                                         thetaProbableSequences=replicate(amount_workers, thetaProbableSequences, FALSE),thetaSequencesSetDiffData=replicate(amount_workers ,thetaSequencesSetDiffData, FALSE),
                                        thetaSequencesSetDiffModel=replicate(amount_workers, thetaSequencesSetDiffModel, FALSE),
-                                       thetaSequencesIntersection=replicate(amount_workers, thetaSequencesIntersection, FALSE), theta=theta, mc.cores = amount_workers)
+                                       thetaSequencesIntersection=replicate(amount_workers, thetaSequencesIntersection, FALSE), theta=replicate(amount_workers, theta, FALSE), mc.cores = amount_workers)
   
   return(partitions_interestingness)
   
@@ -1136,3 +1141,4 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
   }
   return (list(conditionTypes, interestingSequences, interestingnessValues))
 }
+

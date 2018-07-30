@@ -64,7 +64,7 @@ load_marked_sequences <- function()
   #datasets_loaded = load_datasets_by_name(names_datasets_sorted, messages_to_remove)
   
   indexes = find_indices_for_partitions(names_datasets_sorted)
-
+  print("Pre-processing started")
   print(paste("Processing", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
   
   print("Starting parallel")

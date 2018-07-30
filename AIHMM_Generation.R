@@ -41,25 +41,27 @@ run_experiment_workers <- function(amount_workers)
 
 main <- function()
 {
+  
+  #In the initialization phase, we pre-process the dataset and create the initial HMM based on the found observations,
+  #passing the so generated HMM to the iterative phase.
+  
   #sink(paste("hmm_loading_dataset.txt"))
-  #DANIELE LOADED BEFOREHAND
   #sink()
-  
-  #initialization_arguments[[1]] = HMMTrained
-  #initialization_arguments[[2]] = thetaFrequentSequences
-  #initialization_arguments[[3]] = theta
-  #initialization_arguments[[4]] = logLikCur
-  #initialization_arguments[[5]] = sequences
-  #initialization_arguments[[6]] = sortedSequences
-  #initialization_arguments[[7]] = LogLikUnconst
   init = initialization_phase()  
-  k <- 1
   
- 
+  # HMMTrained = init[[1]]
+  # thetaFrequentSequences = init[[2]]
+  # theta = init[[3]]
+  # logLikCur = init[[4]]
+  # sequences = init[[5]]
+  # sortedSequences = init[[6]]
+  # LogLikUnconst = init[[7]]
+  
+  k <- 1
   while(k <= 5)
   {
     #sink(paste("hmm_with_", k, "_interesting_sequences.txt", sep=""))
-    loopOverSequenceSet(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
+    iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
     
@@ -69,7 +71,7 @@ main <- function()
 
 
 
-loopOverSequenceSet <- function(pathToData, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
+iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
 {
     continue=TRUE
     i = 1
@@ -85,11 +87,12 @@ loopOverSequenceSet <- function(pathToData, k, HMMTrained, thetaFrequentSequence
     	print(format(Sys.time(), "%a %b %d %X %Y"))
     	print("Generating and sorting interesting sequences")
 
-    	#it returns: [[1]]=conditionType [[2]] interesting sequences [[3]] interestingness. TODO: extract the uninteresting sequences
-    	#Parallel version is currently not working properly!
-    	#interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
-    	#interestingSequences = combine_partitions_interesting_sequences(interestingSequencesParts)
-    	interestingSequences<-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
+    	#it returns: [[1]]=conditionType [[2]] interesting sequences [[3]] interestingness. 
+    	#Parallel version fixed, now working properly
+    	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
+    	interestingSequences <- combine_partitions_interesting_sequences(interestingSequencesParts)
+    	#Good old sequential version
+    	#interestingSequencesSequential <-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
       	      	
     	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
     	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)     	
