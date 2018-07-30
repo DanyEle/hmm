@@ -765,14 +765,6 @@ return_more <- function(more)
 #       ThetaFrequentValuesnoDups: List containing non-duplicated theta-frequent sequences[[2]] and their corresponding frequency[[1]]
 #Output: the score for all input sequences
 computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, thetaProbableSequences, HMMTrained, theta, amount_workers){	
-  #stores the case from that the score was computed.
-  #conditionTypes = vector()
-  #stores sequences whose score has been computed
-  #interestingSequences = list()
-  #stores the scores for the sequences.
-  #interestingnessValues = vector()
-  #h = 1
-  
   #Partition ThetaSequencesUnion and process each chunk separately
   # set operations
   thetaSequencesUnion = union(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
@@ -790,9 +782,12 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
   
   partitions_interestingness = mcmapply(compute_interestingness_per_partition, partition_theta_union = list_partitions_theta_union, 
                                        thetaFrequentSequences=replicate(amount_workers, thetaFrequentSequences, FALSE), 
-                                        thetaProbableSequences=replicate(amount_workers, thetaProbableSequences, FALSE),thetaSequencesSetDiffData=replicate(amount_workers ,thetaSequencesSetDiffData, FALSE),
+                                        thetaProbableSequences=replicate(amount_workers, thetaProbableSequences, FALSE),
+                                       thetaSequencesSetDiffData=replicate(amount_workers ,thetaSequencesSetDiffData, FALSE),
                                        thetaSequencesSetDiffModel=replicate(amount_workers, thetaSequencesSetDiffModel, FALSE),
-                                       thetaSequencesIntersection=replicate(amount_workers, thetaSequencesIntersection, FALSE), theta=replicate(amount_workers, theta, FALSE), mc.cores = amount_workers)
+                                       thetaSequencesIntersection=replicate(amount_workers, thetaSequencesIntersection, FALSE), 
+                                       theta=replicate(amount_workers, theta, FALSE), 
+                                       HMMTrained = replicate(amount_workers, HMMTrained, FALSE), mc.cores = amount_workers)
   
   return(partitions_interestingness)
   
@@ -800,8 +795,9 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
 }
 
 compute_interestingness_per_partition <- function(partition_theta_union, thetaFrequentSequences, thetaProbableSequences,
-                                                  thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta)
+                                                  thetaSequencesSetDiffData, thetaSequencesSetDiffModel, thetaSequencesIntersection, theta, HMMTrained)
 {
+  #stores the case from that the score was computed.
   conditionTypes = vector()
   #stores sequences whose score has been computed
   interestingSequences = list()
@@ -842,8 +838,8 @@ selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained
 {
   #Apply a reduce to the intersection
   amount_valid_symbols = length(unlist(intersection))
-  print(amount_valid_symbols)
-  print(unlist(intersection))
+  #print(amount_valid_symbols)
+  #print(unlist(intersection))
 
   if(amount_valid_symbols == 0)
   {

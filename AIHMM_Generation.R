@@ -31,7 +31,7 @@ LOAD_CUSTOM_SEQUENCES = TRUE
 #                          FALSE - Output to the console
 #run_experiment_workers(N, boolean)
 #Used to run the initialization phase, followed by the iterative phase with the amount of workers needed
-run_experiment_workers <- function(amount_workers, output_to_file)
+generate_hmm_workers <- function(amount_workers, output_to_file)
 {
       print(paste("Starting initialization phase for amount of workers = ", amount_workers))
       AMOUNT_WORKERS <<- amount_workers
@@ -54,16 +54,24 @@ main <- function(output_to_file)
   {
     sink(paste("hmm_initialization_phase", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
   }
-  #sink()
+  
   init = initialization_phase()  
   
-  HMMTrained = init[[1]]
-  thetaFrequentSequences = init[[2]]
-  theta = init[[3]]
-  logLikCur = init[[4]]
-  sequences = init[[5]]
-  sortedSequences = init[[6]]
-  LogLikUnconst = init[[7]]
+  if(output_to_file == TRUE)
+  {
+    sink()
+    print("Initialization phase completed")
+  }
+  
+  
+  #Uncomment just for debugging the iterative phase
+  # HMMTrained = init[[1]]
+  # thetaFrequentSequences = init[[2]]
+  # theta = init[[3]]
+  # logLikCur = init[[4]]
+  # sequences = init[[5]]
+  # sortedSequences = init[[6]]
+  # LogLikUnconst = init[[7]]
   
   k <- 1
   while(k <= 5)
