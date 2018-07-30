@@ -52,7 +52,7 @@ main <- function(output_to_file)
   #passing the so generated HMM to the iterative phase.
   if(output_to_file == TRUE)
   {
-    sink(paste("hmm_initialization_phase", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
+    sink(paste("hmm_initialization_phase_", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
   }
   
   init = initialization_phase()  
@@ -78,9 +78,10 @@ main <- function(output_to_file)
   {
     if(output_to_file == TRUE)
     {
-      sink(paste("hmm_iterative_phase_with_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
+      sink(paste("hmm_iterative_phase_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
     }
     iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
+    sink()
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
     
