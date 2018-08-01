@@ -1,24 +1,10 @@
 #Daniele Gadler, Andrea Janes, Barbara Russo
 #Free University of Bolzano-Bozen 2016-2018
 
-#pathToData is used only from the script not making use of Damevski et al's dataset
-#pathToData <- "~/TeamDropBox/Dropbox/Thesis/R/Datasets/WindowsPhone_ID.csv"
-
-#How columns are separated from one another
-SEPARATOR_DATASET = ";"
-#Set this to TRUE this if the dataset has no "SequenceIDs" column
-MARK_SEQUENCE_IDS = FALSE
-
-#TRUE = For Damevski's dataset or other datasets, in case we may need to carry out some pre-processing in other functions / files
-#Based on sequences_global <<-
-LOAD_CUSTOM_SEQUENCES = TRUE
-
-#Experimental Features
 #Find all sequences containing SU [Symbols Undesirable]
 #FILTER_SU = FALSE
 #Filter all sequences containing the top 50% most frequent symbols contained in all sequences containing SU
 #FILTER_MOST_FREQUENT_SU  = FALSE
-
 
 
 
@@ -163,14 +149,10 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     	
       	if(continue == TRUE)
       	{
-      	  #WAS GLOBAL
       	  HMMTrained<-newStateHMMConstrained[[1]]
-      	  #WAS GLOBAL
       	  movedSymbols<-newStateHMMConstrained[[2]]
       	  print(movedSymbols)
-      	  #WAS GLOBAL
       	  nrStates<-newStateHMMConstrained[[3]]
-      	  #WAS GLOBAL
       	  LogLikCur <-newStateHMMConstrained[[4]]
       	  print(LogLikCur)
       	  i<-i+1

@@ -79,3 +79,69 @@ display_symbols_frequency<- function(sample)
   return(sampleFreq)
 }
 
+
+
+
+#all_unique_messages: Array containing all the unique messages that can possibly occur in the dataset
+#lists_devs_messages: List of lists, containing:
+#[[1]] = all developers
+#[[2]] = unique messages corresponding to the developer
+find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages)
+{
+  THRESHOLD_RARE_MSG = 0.03
+  
+  library(stringr)
+  
+  list_messages_from_developers = list_devs_messages[[2]]
+  data_frame_messages = data.frame(message=1:length(all_unique_messages))
+  
+  i = 1
+  for(message in all_unique_messages)
+  {
+    #Need to count how many times one message occurred within a list of lists
+    wt <- data.frame(lineNum = 1:length(list_messages_from_developers))
+    
+    #escape all square brackets, else they wouldnt be matched
+    message_escaped_1 = gsub('\\[', '\\\\[', message)
+    message_escaped_2 = gsub('\\]', '\\\\]', message_escaped_1)
+    pattern_match = paste("^",message_escaped_2,"$", sep="")
+    wt$count <- sapply(list_messages_from_developers, function(x) sum(str_count(x, pattern=pattern_match)))
+    occurrences = sum(wt$count)
+    #print(paste(message, " found in ", occurrences , " developers."))
+    
+    data_frame_messages$message[i] = message
+    data_frame_messages$count[i] = occurrences / length(list_messages_from_developers)
+    i = i + 1
+  }
+  
+  messages_to_remove = as.array(data_frame_messages$message[which(data_frame_messages$count <= THRESHOLD_RARE_MSG)])
+  
+  if(length(messages_to_remove) == 0)
+  {
+    print(paste("No actions occurs with <= ", THRESHOLD_RARE_MSG, " frequency"))
+  }
+  return(messages_to_remove)
+  
+}
+
+
+
+#Create a dataframe with sequences and their IDs
+mark_sequences_of_actions_with_ID<-function(sample){
+  sampleObs<-data.frame(sample)
+  prova<-grep("Start", sampleObs$sample, invert=F)
+  t<-0
+  temp<-c(0*1:nrow(sampleObs))
+  for(i in 1:(nrow(sampleObs))){
+    if(i %in% prova){t<-t+1
+    temp[i]<-t
+    }else{t<-t
+    temp[i]<-t}	
+  }
+  sampleObs$SequenceID<-temp
+  return(sampleObs)	
+}
+
+
+
+

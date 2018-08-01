@@ -8,7 +8,7 @@ initialization_phase <- function()
   #Initialization begin
   #sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
   #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
-  sequences_loaded_list_partitions <- load_custom_sequences_if_needed() 
+  sequences_loaded_list_partitions <- load_marked_sequences() 
   
   start_sequential_init = Sys.time()
   
@@ -20,16 +20,13 @@ initialization_phase <- function()
   initialisedProcess<-initializeHMM(pathToData, sequences_loaded)
   #sequenceIDs is also sequences_global$sample
   
-  #WAS GLOBAL!!
   sequences<-initialisedProcess[[1]]
   
   symbols<-initialisedProcess[[2]]
   #Do not compute theta if you want to freely pass it
-  #WAS GLOBAL!!
   theta<-initialisedProcess[[3]]
-  #WAS GLOBAL!!
-  HMMTrained<-initialisedProcess[[4]]
   
+  HMMTrained<-initialisedProcess[[4]]
   
   #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
   #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. 
@@ -77,6 +74,7 @@ initialization_phase <- function()
   remove(sequences_loaded)
   remove(sortedSequencesIDs)
   gc()
+  #Causes lots of cache faults (i.e: high RAM demand) when employing many workers
   parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = 1)
   #parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
   
@@ -88,14 +86,13 @@ initialization_phase <- function()
   #now combine the different parts found.
   thetaFrequentSequences = combine_partitions_sequences(parts_theta_frequent_sequences)
   
-  #plain old sequential part.
+  #plain old sequential version
   #thetaFrequentSequencesSeq <-getThetaFrequentSequences(sortedSequences, theta)  
   #build the unconstrained model from scratch . The loglikelihood is always the same.  
   require(HMM)  
   print("Building an unconstrained model from scratch") 
   HMMInit = initHMM(States=c("state 1", "state 2"), symbols)
   
-  #SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + 2171.123375
   #NO NEED FOR THIS - ALREADY LOADED IN MEMORY
   unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
   #data of unconstrained model
@@ -155,11 +152,8 @@ combine_partitions_interesting_sequences <-function(interestingSequencesParts)
 {
   library(purrr)
   list_return = list()
-  #Ok
   list_return[[1]] = unlist(flatten(interestingSequencesParts[1, ]))
-  #Not okay
   list_return[[2]] = flatten(interestingSequencesParts[2, ])
-  #Ok
   list_return[[3]] = unlist(flatten(interestingSequencesParts[3, ]))
   
   print(paste("Amount of interesting sequences found is ", length(list_return[[3]])))
@@ -207,50 +201,12 @@ displaySymbolsPerState <- function(HMMTrained)
 #To pre-process the dataset and train HMM. It computes theta
 initializeHMM <- function(pathToData, sequences_loaded)
 {   
-  #alternative code in case the set does not contain sequence IDs
+  #old code used for the Gadler et al.'s paper. No need for pre-processing in that case.
+  #SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
+  #sequences <- mark_sequences_of_actions_with_ID(SampleData)
+    
+  #Compute theta. Solved issue with theta being computed based on the max. sequence ID
   
-  if(LOAD_CUSTOM_SEQUENCES == FALSE)
-  {
-    if(MARK_SEQUENCE_IDS == TRUE)
-    {
-      #Will add one column on the left in any case, containing an index per action
-      SampleData <- read.csv(pathToData, sep=SEPARATOR_DATASET, header=T)
-      #Actually identify the actions themselves now
-      #mark the sequence ID if not already done. Output: Dataframe with all sequences in column 1 and their sequence ID on column 2
-      sequences <- mark_sequences_of_actions_with_ID(SampleData)
-      
-    }
-    else if(MARK_SEQUENCE_IDS == FALSE)
-    {
-      #use the following dataset if you already called mark_sequences_of_actions_with_ID. Sample has two columns: sample and ID. It contains all symbols including "Start" and "End"
-      sequences<- read.csv(pathToData, sep=SEPARATOR_DATASET, header=T)
-      # sequences contains columns "sample" and "SequenceID" 
-      
-    }
-    
-    #Good, data frame successfully loaded. Now remove irrelevant symbols
-    
-    
-    print("Removing irrelevant symbols ")
-    #pre-processing symbols: remove symbols that are not relevant. Output: sequences (with ID and cleaned from irrelevant symbols),symbols, theta, HMMTrained
-    SymbolsToRemove = c("Navigate Back to HubPage", "Navigate to HubPage", "Start", "End")
-    
-    newSample<-sequences
-    for(x  in SymbolsToRemove){
-      temp<-newSample[-which(newSample$sample==x),]
-      newSample<-temp
-    }
-    
-    sequences = newSample
-  }
-  else if(LOAD_CUSTOM_SEQUENCES == TRUE)
-  {
-    sequences <- sequences_loaded
-  }
-  
-  #Compute theta. Solved issue with theta being computed maxed on the max. sequence ID
-  
-  #FIXED ZE BUG
   K = length(unique(sequences$SequenceID))
   #just for seeing if it runs faster
   MinLengthSave = 2
@@ -271,42 +227,12 @@ initializeHMM <- function(pathToData, sequences_loaded)
   observations <- as.vector(sequences$sample)
   HMMInit = initHMM(states, symbols) 
   
-  #iFThe HMMTrained was already stored in memory for fast loading
-  #SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + 933.2514875
   HMMTrained <- trainBaumWelch(HMMInit, observations)
   
   return(list(sequences,symbols,theta,HMMTrained))
 }
 
-#Create a dataframe with sequences and their IDs
-mark_sequences_of_actions_with_ID<-function(sample){
-  sampleObs<-data.frame(sample)
-  prova<-grep("Start", sampleObs$sample, invert=F)
-  t<-0
-  temp<-c(0*1:nrow(sampleObs))
-  for(i in 1:(nrow(sampleObs))){
-    if(i %in% prova){t<-t+1
-    temp[i]<-t
-    }else{t<-t
-    temp[i]<-t}	
-  }
-  sampleObs$SequenceID<-temp
-  return(sampleObs)	
-}
 
-
-load_custom_sequences_if_needed <- function()
-{
-  if(LOAD_CUSTOM_SEQUENCES == TRUE)
-  {
-    sequences = load_marked_sequences()
-    return(sequences)
-  }
-  else
-  {
-    return(c())
-  }
-}
 
 ################## This is to train the HMM model
 
@@ -967,7 +893,7 @@ compareModelLogLikelihoodAtIteration<-function(logLikCur, logLikNext){
 
 
 
-#DANIELE: keep the sequential code here as back, just in case
+#sequential code here as back, just in case
 getThetaProbableSequences<-function(HMMTrained, theta){
   #Theta-Probable sequences as global variables
   thetaProbableProbabilities <<- list()
@@ -1028,9 +954,6 @@ generateHMMSequencesIteration <- function(HMMTrained, sequence, forwardProb, the
     })
   }
 } 
-
-
-##DANIELE DESPERATION:
 
 
 

@@ -1,48 +1,41 @@
 #Daniele Gadler, Andrea Janes, Barbara Russo
 #Free University of Bolzano-Bozen 2016-2018
 
+
+#Initial "global" variables
 DATA_PATH = "Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
-
 SEPARATOR = ","
-
 #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 FREQUENCY_PRINT = 5000
-
-THRESHOLD_RARE_MSG = 0.03
-
+#Amount of cores to be used
 AMOUNT_WORKERS <<- 8
-
+#Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
 SEQUENTIAL_TIME <<- 0
 PARALLEL_TIME <<- 0
 
 
-#Also overall amount of cores used (virtual + physical)
+
 
 #######################
-#####MAIN##############
+#####MAIN FUNCTION##############
 #######################
 load_marked_sequences <- function()
 {
-  start_sequential_damevski = Sys.time()
   
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo", "View.File",  "Debug.Debug Break Mode",
-            "Debug.Debug Run Mode",  "Debug.DebugType", "Debug.Enter Design Mode" ,"Build.BuildDone", "Build.BuildBegin")
+                         "Debug.Debug Run Mode",  "Debug.DebugType", "Debug.Enter Design Mode" ,"Build.BuildDone", "Build.BuildBegin")
   
-  #NEW CODE STARTS HERE. Much less and much more effective
+  start_sequential_damevski = Sys.time()
   #names_size_datasets[[1]] = Vector containing names of all datasets
   #names_size_datasets[[2]] = Vector containing size of all datasets (in bytes)
   names_size_datasets = load_names_size_datasets(DATA_PATH)
   
-  #Actually, sort by the amount of messages in the dataset
+  #Sort by the size of each dataset
   names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets)
-  
-  #This is the right scheduling order by decreasing dataset size
-  #datasets_loaded = load_datasets_by_name(names_datasets_sorted, messages_to_remove)
   
   indexes = find_indices_for_partitions(names_datasets_sorted)
   print("Pre-processing started")
   print(paste("Processing", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
-  
   print("Starting parallel")
   
   library("parallel")
@@ -52,14 +45,14 @@ load_marked_sequences <- function()
   SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + (end_sequential_damevski - start_sequential_damevski)
   start_parallel_damevski = Sys.time()
   
+  
+  
   sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
                                       outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
   end_parallel_damevski = Sys.time()
   PARALLEL_TIME <<- PARALLEL_TIME + (end_parallel_damevski - start_parallel_damevski)
-  #print("Finished parallel")
-  
-  #print(Sys.time())
-  
+  print("Finished parallel")
+  print(Sys.time())
   start_sequential_damevski = Sys.time()
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
@@ -203,6 +196,7 @@ load_filter_dataset_given_name_parallel <- function(dataset_name, outlier_symbol
 {
   #Great, now load the dataset passed and remove outliers from it
   dataLoaded = read.csv(dataset_name, sep=SEPARATOR, header=T)
+  #outliers removed
   sampleObs = load_filter_single_dataset(outlier_symbols, dataLoaded)
   
   print(paste("Loaded " , dataset_name, " with ", length(sampleObs$sample), " messages.", sep=""))
@@ -350,10 +344,7 @@ load_names_size_datasets <- function(folder_datasets)
   for (dataset in all_datasets)
   {
     dataset_name = paste(folder_datasets,"/", dataset, sep="")
-  #  print(file.info(datasetLoaded)$size)
     datasets_names[i] <- dataset_name
-    #dataset_loaded <- read.csv(dataset_name, sep=SEPARATOR, header=T)
-    #datasets_sizes[i] <- length(dataset_loaded$message)
     datasets_sizes[i] <- file.size(dataset_name)
     i = i + 1
   }
@@ -373,82 +364,3 @@ sort_datasets_names_by_size <- function(names_size_datasets)
   
   return(names_sorted)
 }
-
-
-
-
-
-#1 dataset = 1 developer. Will need to use double indexing for accessing multiple elements in it
-load_unique_messages_for_developers <- function(folder_datasets)
-{
- all_datasets = list.files(path=folder_datasets)
- 
- #Array of all unique developers
- all_devs = list()
- #Array of all unique messages corresponding to one developer
- all_unique_messages = list()
- print(paste("Getting all unique messages for developers from the datasets in the folder ", folder_datasets))
- i = 1
- for (dataset in all_datasets)
- {
-   print(paste("Loading unique messages from dataset ", dataset))
-   dataLoaded <- read.csv(paste(folder_datasets,"/", dataset, sep=""), sep=SEPARATOR, header=T)
-   uniqueMessages = unique(dataLoaded$message)
-   developer = dataLoaded$developer_id[1]
-   all_devs[i] = developer
-   all_unique_messages[[i]] = as.array(uniqueMessages)
-   i = i + 1
- }
- return(list(all_devs, all_unique_messages))
-}
-
-
-
-
-#all_unique_messages: Array containing all the unique messages that can possibly occur in the dataset
-#lists_devs_messages: List of lists, containing:
-#[[1]] = all developers
-#[[2]] = unique messages corresponding to the developer
-find_extremely_rare_messages <- function(list_devs_messages, all_unique_messages)
-{
-  library(stringr)
-  
-  list_messages_from_developers = list_devs_messages[[2]]
-  data_frame_messages = data.frame(message=1:length(all_unique_messages))
-  
-  i = 1
-  for(message in all_unique_messages)
-  {
-    #Need to count how many times one message occurred within a list of lists
-    wt <- data.frame(lineNum = 1:length(list_messages_from_developers))
-    
-    #escape all square brackets, else they wouldnt be matched
-    message_escaped_1 = gsub('\\[', '\\\\[', message)
-    message_escaped_2 = gsub('\\]', '\\\\]', message_escaped_1)
-    pattern_match = paste("^",message_escaped_2,"$", sep="")
-    wt$count <- sapply(list_messages_from_developers, function(x) sum(str_count(x, pattern=pattern_match)))
-    occurrences = sum(wt$count)
-    #print(paste(message, " found in ", occurrences , " developers."))
-    
-    data_frame_messages$message[i] = message
-    data_frame_messages$count[i] = occurrences / length(list_messages_from_developers)
-    i = i + 1
-  }
-  
-  messages_to_remove = as.array(data_frame_messages$message[which(data_frame_messages$count <= THRESHOLD_RARE_MSG)])
-  
-  if(length(messages_to_remove) == 0)
-  {
-    print(paste("No actions occurs with <= ", THRESHOLD_RARE_MSG, " frequency"))
-  }
-  
-
-  return(messages_to_remove)
-  
-}
-
-
-
-
-
-
