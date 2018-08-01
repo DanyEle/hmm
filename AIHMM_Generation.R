@@ -45,7 +45,6 @@ main <- function(output_to_file)
   
   if(output_to_file == TRUE)
   {
-    sink()
     print("Initialization phase completed")
   }
   
@@ -67,7 +66,6 @@ main <- function(output_to_file)
       sink(paste("hmm_iterative_phase_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %X %Y.txt"), sep=""))
     }
     iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
-    sink()
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
     

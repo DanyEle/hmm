@@ -782,6 +782,16 @@ selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained
     
     for(i in 1:k)
     {
+      #Check if i is going out of range
+      if(i >= length(unlist(intersection)))
+      {
+        print("Stopping process. Not enough new symbols present in the top k-interesting sequences")
+        print(HMMTrained)
+        return(list(intersection, FALSE))
+      }
+      print(paste("i = ", i, " length = ", length(unlist(intersection))))
+      
+      
       toMoveSymbolsCur <- unlist(intersection[which(!q==TRUE)[[i]]])
       toMoveSymbolsUnion <- union(toMoveSymbolsUnion, toMoveSymbolsCur)
     }
