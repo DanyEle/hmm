@@ -204,7 +204,8 @@ initializeHMM <- function(pathToData, sequences_loaded)
   #old code used for the Gadler et al.'s paper. No need for pre-processing in that case.
   #SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
   #sequences <- mark_sequences_of_actions_with_ID(SampleData)
-    
+  
+  sequences = sequences_loaded
   #Compute theta. Solved issue with theta being computed based on the max. sequence ID
   
   K = length(unique(sequences$SequenceID))
