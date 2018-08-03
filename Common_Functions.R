@@ -8,9 +8,8 @@ initialization_phase <- function()
   #Initialization begin
   #sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
   #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
-  sequences_loaded_list_partitions <- load_marked_sequences() 
+  sequences_loaded_list_partitions <- load_marked_sequences_damevski() 
   
-  start_sequential_init = Sys.time()
   
   sequences_loaded = sequences_loaded_list_partitions[[1]]
   partitions_sequences_loaded = sequences_loaded_list_partitions[[2]]
@@ -32,12 +31,8 @@ initialization_phase <- function()
   #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. 
   list_partitions_sequences = find_list_partitions_given_data_frame_partitions(partitions_sequences_loaded)
   
-  time_before = Sys.time()
   #Not really parallel. Only uses 1 worker, but multiple partitions. 
   sortedSequencesIDs <- sortSequencesWithIDs(list_partitions_sequences)
-  time_after = Sys.time()
-  
-  time_spent = time_after - time_before
   
   #WAS GLOBAL!
   sortedSequences <- sortedSequencesIDs[[1]]
@@ -63,11 +58,6 @@ initialization_phase <- function()
   start_end_indexes = return_partition_of_data_structure(length(sortedSequences), 1) #AMOUNT_WORKERS
   partitions_sequences_loaded = find_partitions_for_sequences_given_start_end(sortedSequences, start_end_indexes)
   
-  end_sequential_init = Sys.time()
-  
-  SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + (end_sequential_init - start_sequential_init)
-  
-  start_parallel_init = Sys.time()
   
   #To run with a large amount of workers(?)
   remove(sequences_loaded_list_partitions)
@@ -78,11 +68,6 @@ initialization_phase <- function()
   parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = 1)
   #parts_theta_frequent_sequences = mcmapply(getThetaFrequentSequences, sortedSequences = partitions_sequences_loaded, theta=theta, mc.cores = AMOUNT_WORKERS)
   
-  end_parallel_init = Sys.time()
-  
-  PARALLEL_TIME <<- PARALLEL_TIME + (end_parallel_init - start_parallel_init)
-  
-  start_sequential_init = Sys.time()
   #now combine the different parts found.
   thetaFrequentSequences = combine_partitions_sequences(parts_theta_frequent_sequences)
   
@@ -104,10 +89,6 @@ initialization_phase <- function()
   print(paste("Loglik of unconstrained model with same nr of states: ", LogLikUnconst))
   #Was global!!  
   LogLikCur<-LogLikInit
-  
-  end_sequential_init = Sys.time()
-  
-  SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + (end_sequential_init - start_sequential_init)
   
   
   return(list(HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst))
@@ -1080,4 +1061,53 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
   }
   return (list(conditionTypes, interestingSequences, interestingnessValues))
 }
+
+
+###FUNCTIONS FOR PRE-PROCESSING
+load_names_size_datasets <- function(folder_datasets)
+{
+  all_datasets = list.files(path=folder_datasets)
+  
+  #Array of all unique developers
+  datasets_names = c()
+  #Array of all unique messages corresponding to one developer
+  datasets_sizes = c()
+  print(paste("Getting all datasets' names and sizes in the folder ", folder_datasets))
+  i = 1
+  for (dataset in all_datasets)
+  {
+    dataset_name = paste(folder_datasets,"/", dataset, sep="")
+    datasets_names[i] <- dataset_name
+    datasets_sizes[i] <- file.size(dataset_name)
+    i = i + 1
+  }
+  
+  return(list(datasets_names, datasets_sizes))
+}
+
+sort_datasets_names_by_size <- function(names_size_datasets)
+{
+  names = names_size_datasets[[1]]
+  sizes = names_size_datasets[[2]]
+  
+  #Sort the datasets' names according to their size in decreasing order
+  names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
+  
+  return(names_sorted)
+}
+
+find_indices_for_partitions <- function(partitions)
+{
+  indices = list()
+  index = 1
+  for(i in 1:length(partitions))
+  {
+    indices[i] = index
+    index = index + 10000000
+  }
+  return(indices)
+}
+
+
+
 

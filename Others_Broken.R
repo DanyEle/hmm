@@ -894,6 +894,18 @@ load_all_existing_unique_messages <- function(INFO_PATH, list_devs_messages)
 
 
 
+create_partitions_for_workers <- function(start_indexes_datasets, end_indexes_datasets, sampleObs)
+{
+  partitions = list()
+  
+  for(i in 1:length(start_indexes_datasets))
+  {
+    partitions[[i]] = sampleObs[start_indexes_datasets[[i]]:end_indexes_datasets[[i]],]
+  }
+  return(partitions)
+}
+
+
 
 
 

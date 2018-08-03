@@ -8,28 +8,24 @@ SEPARATOR = ","
 #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 FREQUENCY_PRINT = 5000
 #Amount of cores to be used
-AMOUNT_WORKERS <<- 8
+AMOUNT_WORKERS <<- 1
 #Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
-SEQUENTIAL_TIME <<- 0
-PARALLEL_TIME <<- 0
 
 
 
 
-#######################
+##########################
 #####MAIN FUNCTION##############
-#######################
-load_marked_sequences <- function()
+#########################
+load_marked_sequences_damevski <- function()
 {
   
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo", "View.File",  "Debug.Debug Break Mode",
                          "Debug.Debug Run Mode",  "Debug.DebugType", "Debug.Enter Design Mode" ,"Build.BuildDone", "Build.BuildBegin")
   
-  start_sequential_damevski = Sys.time()
   #names_size_datasets[[1]] = Vector containing names of all datasets
   #names_size_datasets[[2]] = Vector containing size of all datasets (in bytes)
   names_size_datasets = load_names_size_datasets(DATA_PATH)
-  
   #Sort by the size of each dataset
   names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets)
   
@@ -40,43 +36,19 @@ load_marked_sequences <- function()
   
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
-    
-  end_sequential_damevski = Sys.time()
-  SEQUENTIAL_TIME <<- SEQUENTIAL_TIME + (end_sequential_damevski - start_sequential_damevski)
-  start_parallel_damevski = Sys.time()
-  
-  
   
   sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
                                       outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
-  end_parallel_damevski = Sys.time()
-  PARALLEL_TIME <<- PARALLEL_TIME + (end_parallel_damevski - start_parallel_damevski)
   print("Finished parallel")
   print(Sys.time())
-  start_sequential_damevski = Sys.time()
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
-  end_sequential_damevski = Sys.time()
   
-  SEQUENTIAL_TIME = SEQUENTIAL_TIME + (end_sequential_damevski - start_sequential_damevski)
-
   return(list(sequences_marked, sequences_marked_split))
 }
 
 
 
-
-
-create_partitions_for_workers <- function(start_indexes_datasets, end_indexes_datasets, sampleObs)
-{
-  partitions = list()
-    
-  for(i in 1:length(start_indexes_datasets))
-  {
-    partitions[[i]] = sampleObs[start_indexes_datasets[[i]]:end_indexes_datasets[[i]],]
-  }
-  return(partitions)
-}
 
 
 combine_sequences_marked <- function(sequences_marked_split)
@@ -98,17 +70,7 @@ combine_sequences_marked <- function(sequences_marked_split)
 }
 
 
-find_indices_for_partitions <- function(partitions)
-{
-  indices = list()
-  index = 1
-  for(i in 1:length(partitions))
-  {
-    indices[i] = index
-    index = index + 10000000
-  }
-  return(indices)
-}
+
 
 #Input: sampleObs: the sample of actions which is is to be split
 #       no_cores: the amount of cores, also the amount of partitions into that the sampleObs is going to be split
@@ -331,36 +293,6 @@ mark_debug_sessions_with_ID <- function(sampleObs, index){
 }
 
 
-load_names_size_datasets <- function(folder_datasets)
-{
-  all_datasets = list.files(path=folder_datasets)
-  
-  #Array of all unique developers
-  datasets_names = c()
-  #Array of all unique messages corresponding to one developer
-  datasets_sizes = c()
-  print(paste("Getting all datasets' names and sizes in the folder ", folder_datasets))
-  i = 1
-  for (dataset in all_datasets)
-  {
-    dataset_name = paste(folder_datasets,"/", dataset, sep="")
-    datasets_names[i] <- dataset_name
-    datasets_sizes[i] <- file.size(dataset_name)
-    i = i + 1
-  }
-  
-  return(list(datasets_names, datasets_sizes))
-}
 
 
 
-sort_datasets_names_by_size <- function(names_size_datasets)
-{
-  names = names_size_datasets[[1]]
-  sizes = names_size_datasets[[2]]
-  
-  #Sort the datasets' names according to their size in decreasing order
-  names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
-  
-  return(names_sorted)
-}

@@ -21,14 +21,7 @@ generate_hmm_workers <- function(amount_workers, output_to_file)
 {
       print(paste("Starting initialization phase for amount of workers = ", amount_workers))
       AMOUNT_WORKERS <<- amount_workers
-      SEQUENTIAL_TIME <<- 0
-      PARALLEL_TIME <<- 0
       main(output_to_file)
-      seq_time =  as.numeric(SEQUENTIAL_TIME, units="secs")
-      par_time =  as.numeric(PARALLEL_TIME, units="secs")
-      overall_time = seq_time + par_time
-      
-      print(paste("For amount of workers = ", amount_workers, "Overall time = ",  overall_time ,"Sequential time = ", as.numeric(seq_time, units="secs"), "Parallel time", as.numeric(par_time, units="secs")))
 } 
 
 main <- function(output_to_file)
@@ -58,8 +51,8 @@ main <- function(output_to_file)
   # sortedSequences = init[[6]]
   # LogLikUnconst = init[[7]]
   
-  k <- 1
-  while(k <= 5)
+  k <- 7
+  while(k <= 10)
   {
     if(output_to_file == TRUE)
     {
@@ -68,7 +61,6 @@ main <- function(output_to_file)
     iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
     k <- k + 1
     print(paste("Now with k = ", k, sep=""))
-    
   }
   
 }
