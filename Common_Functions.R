@@ -8,7 +8,11 @@ initialization_phase <- function()
   #Initialization begin
   #sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
   #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
-  sequences_loaded_list_partitions <- load_marked_sequences_damevski() 
+
+  #DAMEVSKI PRE-PROCESSING
+  #sequences_loaded_list_partitions <- load_marked_sequences_damevski() 
+  #ALMA PRE-PROCESSING
+  sequences_loaded_list_partitions <- load_marked_sequences_alma()
   
   
   sequences_loaded = sequences_loaded_list_partitions[[1]]
@@ -34,7 +38,6 @@ initialization_phase <- function()
   #Not really parallel. Only uses 1 worker, but multiple partitions. 
   sortedSequencesIDs <- sortSequencesWithIDs(list_partitions_sequences)
   
-  #WAS GLOBAL!
   sortedSequences <- sortedSequencesIDs[[1]]
   
   #theta = length(sortedSequences)
@@ -327,7 +330,6 @@ baumWelchRecursionFixed <- function (hmm, observations){
 sortSequencesWithIDs <- function(list_partitions_sequences){
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print("Sorting sequences and IDs")	
-  #Doesn't fit in cache --> Causes too many cache faults. Parallel version with only 1 thread actually performs better!
   library("parallel")
   library("purrr")
   #convert partitions into data frame
@@ -361,8 +363,13 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   
   for (i in 1:nrow(myDataFrameS))
   {
-    orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
-    orderedIDs[[i]]<-newDataFrameID[i,][-which(is.na(newDataFrameID[i,]))]
+    #Damevski
+    #orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
+    #orderedIDs[[i]]<-newDataFrameID[i,][-which(is.na(newDataFrameID[i,]))]
+    #ALMA
+    orderedSequences[[i]]<-newDataFrameS[i,][which(!(is.na(newDataFrameS[i,])))]
+    orderedIDs[[i]]<-newDataFrameID[i,][which(!(is.na(newDataFrameID[i,])))]
+    
   }
   names(orderedSequences)<-rep("sequence",length(orderedSequences))
   names(orderedIDs)<-rep("sequenceID",length(orderedIDs))	  
@@ -1107,6 +1114,28 @@ find_indices_for_partitions <- function(partitions)
   }
   return(indices)
 }
+
+
+
+combine_sequences_marked <- function(sequences_marked_split)
+{
+  list_partition <- list()
+  
+  #combine the resulting data frames into a list
+  for(i in 1:ncol(sequences_marked_split))
+  {
+    data_frame_cur = as.data.frame(sequences_marked_split[, i])
+    list_partition[[i]] <- data_frame_cur
+  }
+  
+  library("data.table")
+  #now "unwrap" the list into one single data frame
+  merged_data_frames = rbindlist(list_partition)
+  
+  return(merged_data_frames)
+}
+
+
 
 
 

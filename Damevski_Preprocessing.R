@@ -51,25 +51,6 @@ load_marked_sequences_damevski <- function()
 
 
 
-combine_sequences_marked <- function(sequences_marked_split)
-{
-  list_partition <- list()
-  
-  #combine the resulting data frames into a list
-  for(i in 1:ncol(sequences_marked_split))
-  {
-    data_frame_cur = as.data.frame(sequences_marked_split[, i])
-    list_partition[[i]] <- data_frame_cur
-  }
-  
-  library("data.table")
-  #now "unwrap" the list into one single data frame
-  merged_data_frames = rbindlist(list_partition)
-  
-  return(merged_data_frames)
-}
-
-
 
 
 #Input: sampleObs: the sample of actions which is is to be split

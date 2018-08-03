@@ -6,6 +6,7 @@ FREQUENCY_PRINT = 5000
 #Amount of cores to be used
 AMOUNT_WORKERS <<- 1
 #Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
+MESSAGES_PER_SEQUENCE = 15
 
 
 load_marked_sequences_alma <- function()
@@ -22,42 +23,49 @@ load_marked_sequences_alma <- function()
   library("parallel")
   sequences_marked_split = mcmapply(load_filter_alma_dataset_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes, mc.cores = AMOUNT_WORKERS) 
 
+  print("Finished parallel")
+  print(Sys.time())
+  #Now merge the different partitions into one data table
+  sequences_marked = combine_sequences_marked(sequences_marked_split)
+  
+  return(list(sequences_marked, sequences_marked_split))
 }
 
 
 load_filter_alma_dataset_parallel <- function(dataset_name, index)
 {
   #Fine, we got our dataset_name that is a relative or absolute location of the dataset being considered
-  
-  #Cast the black cells ("") to NA
   linesRead = readLines(dataset_name, skipNul=FALSE)  
+  #Create a data frame
+  dataLoaded = read.table(textConnection(linesRead), col.names = c("File", "Line", "Routine"), header=T)
+  #Now we need to put together the "File" and "Routine" columns
+  dataFrameMerged = data.frame(sample=(paste(dataLoaded$File, "::", dataLoaded$Routine, sep="")))
+  #now assign one sequence ID to every message of the data frame
+  sequenceIDs = find_sequence_ids_given_messages(dataFrameMerged$sample, index)
+  dataFrameMerged$SequenceID = sequenceIDs
   
-  linesReadNA = sapply(linesRead, insertNAInLine)
-  
-  read.table(textConnection(linesReadNA))
-
-
+  return(dataFrameMerged)
 }
 
-#Input: a line from the input text file
-#Output: a line with an "NA" in it if it contains only two elements (i.e: third column is empty)
-insertNAInLine <- function(line)
+
+find_sequence_ids_given_messages <- function(list_messages, index)
 {
-  
-  amount_matches = str_count(line, "\\S+")
-  
-  #Only two matches, then we need to insert an NA into the string
-  if(amount_matches == 2)
+  vector_indexes = c()
+  #initialize it with the index passed
+  index_cur = index
+  for(i in 1:length(list_messages))
   {
-    line = paste(line, "     ", "NA" , sep="")
+    
+    if(i %% MESSAGES_PER_SEQUENCE == 1 && (i != 1))
+    {
+      index_cur = index_cur + 1
+    }
+    
+    vector_indexes[i] = index_cur
+    
   }
-  
-  return(line)
+  return(vector_indexes)
 }
-
-
-
-
 
 
 
