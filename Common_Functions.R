@@ -82,7 +82,7 @@ initialization_phase <- function()
   HMMInit = initHMM(States=c("state 1", "state 2"), symbols)
   
   #NO NEED FOR THIS - ALREADY LOADED IN MEMORY
-  unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences[[1]]))
+  unconstrainedHMM <- trainBaumWelch(HMMInit, as.vector(sequences$sample))
   #data of unconstrained model
   EmissMatrixUnconst = unconstrainedHMM$emissionProbs
   TransMatrixUnconst = unconstrainedHMM$transProbs
@@ -188,10 +188,8 @@ initializeHMM <- function(pathToData, sequences_loaded)
   #old code used for the Gadler et al.'s paper. No need for pre-processing in that case.
   #SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
   #sequences <- mark_sequences_of_actions_with_ID(SampleData)
-  
   sequences = sequences_loaded
   #Compute theta. Solved issue with theta being computed based on the max. sequence ID
-  
   K = length(unique(sequences$SequenceID))
   #just for seeing if it runs faster
   MinLengthSave = 2
@@ -211,7 +209,6 @@ initializeHMM <- function(pathToData, sequences_loaded)
   require(HMM)  
   observations <- as.vector(sequences$sample)
   HMMInit = initHMM(states, symbols) 
-  
   HMMTrained <- trainBaumWelch(HMMInit, observations)
   
   return(list(sequences,symbols,theta,HMMTrained))
@@ -1104,6 +1101,7 @@ combine_sequences_marked <- function(sequences_marked_split)
   
   return(merged_data_frames)
 }
+
 
 
 

@@ -4,7 +4,6 @@ SOURCE_PATH = "LogSourceInformation.txt"
 EVENT_PATH = "LogEventSet.txt"
 RUNTIME_PATH = "LogRuntimeInformation.txt"
 #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
-FREQUENCY_PRINT = 5000
 #Amount of cores to be used
 AMOUNT_WORKERS <<- 1
 #Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
@@ -16,16 +15,16 @@ MESSAGES_PER_SEQUENCE = 15
 
 load_marked_sequences_alma <- function()
 {
-  amount_rows = get_amount_rows_from_file(SOURCE_PATH)
+  amount_rows = get_amount_rows_from_file(SOURCE_PATH) #OK
   #find start and end indexes for the input dataset based on the amount of workers passed
-  start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows)
+  start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows) #OK
   #now load up the dataset and break it into smaller partitions consisting of data frames
-  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, SOURCE_PATH)
-  indexes = find_indices_for_partitions(dataframes_partitions_dataset)
+  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, SOURCE_PATH)  #OK
+  indexes = find_indices_for_partitions(dataframes_partitions_dataset) #OK
   
   #Now we also need to partition the EVENT_PATH based on the start_end_indexes found
-  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, EVENT_PATH, 5)
-  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, RUNTIME_PATH, 2)
+  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, EVENT_PATH, 5) #OK
+  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, RUNTIME_PATH, 2) #OK
   
 
   print(paste("Starting parallel dataset", SOURCE_PATH  , " with ", AMOUNT_WORKERS, " workers"))
@@ -33,8 +32,8 @@ load_marked_sequences_alma <- function()
   
   #merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, linesReadEvent, linesReadRuntime)
     
-  sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, mc.cores = AMOUNT_WORKERS, 
-                                    eventPartitions, runtimePartitions) 
+  sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
+                                    eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS ) 
 
   print("Finished parallel")
   print(Sys.time())
@@ -61,7 +60,7 @@ merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, event
   
   #now assign one sequence ID to every message of the data frame, after filtering them
   dataFrameReturn = data.frame(data.frame(matrix(ncol = 2, nrow = length(sampleMessagesPartition$SequenceID))))
-  colnames(dataFrameReturn) = c("SequenceID", "sample")
+  colnames(dataFrameReturn) = c("sample", "SequenceID")
   
   
   if(length(dataFrameReturn$SequenceID) > 0)
@@ -169,7 +168,7 @@ filter_messages_for_data_frame <- function(partitionDataFrameMerged, eventPartit
   
   #####FILTER THE RUNTIME MESSAGES
   #now load up all event logs that are javaContainer processes
-  dataLoadedRuntime = read.table(textConnection(runtimePartitions[1:length(runtimePartitions)]),  header=TRUE,  col.names = c("Host", "Process", "Thread", "SourceObject"))
+  dataLoadedRuntime = read.table(textConnection(runtimePartitions[1:length(runtimePartitions)]),  header=FALSE,  col.names = c("Host", "Process", "Thread", "SourceObject"))
   library("stringr")
   processListRuntime =  which(!is.na(str_match(dataLoadedRuntime$Process, "javaContainer")))
   ##NB DANIELE: USE AN "AND" HERE

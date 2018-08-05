@@ -43,13 +43,13 @@ main <- function(output_to_file)
   
   
   #Uncomment just for debugging the iterative phase
-  # HMMTrained = init[[1]]
-  # thetaFrequentSequences = init[[2]]
-  # theta = init[[3]]
-  # logLikCur = init[[4]]
-  # sequences = init[[5]]
-  # sortedSequences = init[[6]]
-  # LogLikUnconst = init[[7]]
+  HMMTrained = init[[1]]
+  thetaFrequentSequences = init[[2]]
+  theta = init[[3]]
+  logLikCur = init[[4]]
+  sequences = init[[5]]
+  sortedSequences = init[[6]]
+  LogLikUnconst = init[[7]]
   
   k <- 1
   while(k <= 5)
@@ -89,7 +89,7 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
     	interestingSequences <- combine_partitions_interesting_sequences(interestingSequencesParts)
     	#Good old sequential version
-    	#interestingSequencesSequential <-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
+    	interestingSequencesSequential <-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
       	      	
     	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
     	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)     	
@@ -130,10 +130,8 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
       	{
       	  #Compare current log-likelihood with the one of the previous iteration
       	  continue <- compareModelLogLikelihoodAtIteration(LogLikCur, LogLikConstrained)
-      	  
       	}
       }
-    	
     	
     	print(format(Sys.time(), "%a %b %d %X %Y"))
     	print(continue)
