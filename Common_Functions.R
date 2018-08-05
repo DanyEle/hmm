@@ -683,9 +683,12 @@ computeAllSequencesInterestingnessParallel <- function(thetaFrequentSequences, t
   # set operations
   thetaSequencesUnion = union(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
   
-  start_and_indexes = return_partition_of_data_structure(length(thetaSequencesUnion), amount_workers)
+  start_end_indexes = return_partition_of_data_structure(length(thetaSequencesUnion), amount_workers)
+  
+  #if one or more partitions have 0 or negative size, then get rid of them
+  start_end_indexes = remove_empty_partition_indexes(start_end_indexes, length(thetaSequencesUnion))
 
-  list_partitions_theta_union = find_partitions_for_sequences_given_start_end(sortedSequences = thetaSequencesUnion, start_and_indexes)
+  list_partitions_theta_union = find_partitions_for_sequences_given_start_end(sortedSequences = thetaSequencesUnion, start_end_indexes)
   
   #Theta-Frequent - Theta-Probable
   thetaSequencesSetDiffData = setdiff(thetaFrequentSequences[[1]], thetaProbableSequences[[1]])
@@ -737,6 +740,23 @@ compute_interestingness_per_partition <- function(partition_theta_union, thetaFr
     }
   }
   return (list(conditionTypes, interestingSequences, interestingnessValues))
+}
+
+remove_empty_partition_indexes <- function(start_end_indexes, length_theta_sequences) 
+{
+  start_indexes = c()
+  end_indexes = c()
+  for(i in 1:length(start_end_indexes[[1]]))
+  {
+    if(start_end_indexes[[1]][i] <= length_theta_sequences)
+    {
+      start_indexes[i]  = start_end_indexes[[1]][i]
+      end_indexes[i]  = start_end_indexes[[2]][i]
+      
+    }
+  }
+  
+  return(list(start_indexes, end_indexes))
 }
 
 

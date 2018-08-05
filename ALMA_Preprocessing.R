@@ -1,11 +1,11 @@
 #Initial "global" variables
 #Locations of the input files
-SOURCE_PATH = "LogSourceInformation.txt"
-EVENT_PATH = "LogEventSet.txt"
-RUNTIME_PATH = "LogRuntimeInformation.txt"
+SOURCE_PATH = "Datasets_ALMA_Big/LogSourceInformation.txt"
+EVENT_PATH = "Datasets_ALMA_Big/LogEventSet.txt"
+RUNTIME_PATH = "Datasets_ALMA_Big/LogRuntimeInformation.txt"
 #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 #Amount of cores to be used
-AMOUNT_WORKERS <<- 1
+AMOUNT_WORKERS <<- 8
 #Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
 MESSAGES_PER_SEQUENCE = 15
 
@@ -17,20 +17,20 @@ load_marked_sequences_alma <- function()
 {
   amount_rows = get_amount_rows_from_file(SOURCE_PATH) #OK
   #find start and end indexes for the input dataset based on the amount of workers passed
-  start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows) #OK
+  start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows) 
   #now load up the dataset and break it into smaller partitions consisting of data frames
-  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, SOURCE_PATH)  #OK
-  indexes = find_indices_for_partitions(dataframes_partitions_dataset) #OK
+  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, SOURCE_PATH)  
+  indexes = find_indices_for_partitions(dataframes_partitions_dataset) 
   
   #Now we also need to partition the EVENT_PATH based on the start_end_indexes found
-  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, EVENT_PATH, 5) #OK
-  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, RUNTIME_PATH, 2) #OK
+  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, EVENT_PATH, 5) 
+  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, RUNTIME_PATH, 2) 
   
 
   print(paste("Starting parallel dataset", SOURCE_PATH  , " with ", AMOUNT_WORKERS, " workers"))
   library("parallel")
   
-  #merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, linesReadEvent, linesReadRuntime)
+  #merge_filter_alma_dataset_parallel(partition_dataframe, index, linesReadEvent, linesReadRuntime)
     
   sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
                                     eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS ) 
@@ -47,13 +47,20 @@ load_marked_sequences_alma <- function()
 #Merge the "File" and "Routine" columns, then remove all the ones not matching the condition for it
 merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, eventPartitions, runtimePartitions)
 {
+  print("Reading table in parallel...")
+  #getting the linesRead as input, now actually turning them into a proper data frame
+  partition_dataframe = read.table(textConnection(partition_dataframe), col.names = c("File", "Line", "Routine"), header=T)
+  
   #Now we need to put together the "File" and "Routine" columns for one partition
   #OK
+  print("Merging data frame columns")
   partitionDataFrameMerged = data.frame(sample=(paste(partition_dataframe$File, "::", partition_dataframe$Routine, sep="")))
   #Firstly, need to assign the sequence ID. Then, need to filter. 
+  print("Finding sequence ID")
   sequenceIDs = find_sequence_ids_given_messages(partitionDataFrameMerged$sample, index)
   partitionDataFrameMerged$SequenceID = sequenceIDs
   
+  print("Filtering messages")
   sampleMessagesPartition = filter_messages_for_data_frame(partitionDataFrameMerged, eventPartitions, runtimePartitions)
   #  sequenceIDs = find_sequence_ids_given_messages(sampleMessagesPartition, index)
 
@@ -106,18 +113,21 @@ get_amount_rows_from_file <- function(source_path)
 
 
 
+
 load_partitions_dataset <- function(start_end_indexes_dataset, source_path)
 {
+  print("reading lines...")
   #Fine, we got our dataset_name that is a relative or absolute location of the dataset being considered
   linesRead = readLines(source_path, skipNul=FALSE)  
-  #Create a data frame
-  dataLoaded = read.table(textConnection(linesRead), col.names = c("File", "Line", "Routine"), header=T)
-  #fine, we got our data frame loaded. We now need to split it into as many partitions as indexes
   
-  partitions_data_loaded = find_partitions_for_data_frame_given_start_end(dataLoaded, start_end_indexes_dataset)
+  #fine, we got our data frame loaded. We now need to split it into as many partitions as indexes
+  print("generating partitions from the dataset")
+  partitions_data_loaded = find_partitions_for_sequences_given_start_end(linesRead, start_end_indexes_dataset)
+  #keep it like this for now
   
   return(partitions_data_loaded)
 }
+
 
 
 

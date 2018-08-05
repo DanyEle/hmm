@@ -87,6 +87,16 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     	#it returns: [[1]]=conditionType [[2]] interesting sequences [[3]] interestingness. 
     	#Parallel version fixed, now working properly
     	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
+    	
+    	#No interesting sequences identified --> Stop!
+    	print(paste("AMOUNT OF INT. SEQUENCES", length(interestingSequencesParts[1, ][[1]])))
+    	
+    	if(length(interestingSequencesParts[1, ][[1]]) == 0 )
+    	{
+    	  print(HMMTrained)
+    	  quit("Stopping process. No interesting sequences identified. ")
+    	}
+    	
     	interestingSequences <- combine_partitions_interesting_sequences(interestingSequencesParts)
     	#Good old sequential version
     	interestingSequencesSequential <-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
