@@ -1,4 +1,4 @@
-Automatic and Interactive Hidden Markov Model creation in R (c) by Daniele Gadler, Barbara Russo, Andrea Janes
+Automatic and Interactive Hidden Markov Model creation in R (c) by Daniele Gadler, Barbara Russo, Andrea Janes 
 
 Automatic and Interactive Hidden Markov Model creation in R is licensed under a
 Creative Commons Attribution 4.0 International License.
