@@ -1071,37 +1071,7 @@ computeAllSequencesInterestingness <- function(thetaFrequentSequences, thetaProb
 
 
 ###FUNCTIONS FOR PRE-PROCESSING
-load_names_size_datasets <- function(folder_datasets)
-{
-  all_datasets = list.files(path=folder_datasets)
-  
-  #Array of all unique developers
-  datasets_names = c()
-  #Array of all unique messages corresponding to one developer
-  datasets_sizes = c()
-  print(paste("Getting all datasets' names and sizes in the folder ", folder_datasets))
-  i = 1
-  for (dataset in all_datasets)
-  {
-    dataset_name = paste(folder_datasets,"/", dataset, sep="")
-    datasets_names[i] <- dataset_name
-    datasets_sizes[i] <- file.size(dataset_name)
-    i = i + 1
-  }
-  
-  return(list(datasets_names, datasets_sizes))
-}
 
-sort_datasets_names_by_size <- function(names_size_datasets)
-{
-  names = names_size_datasets[[1]]
-  sizes = names_size_datasets[[2]]
-  
-  #Sort the datasets' names according to their size in decreasing order
-  names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
-  
-  return(names_sorted)
-}
 
 find_indices_for_partitions <- function(partitions)
 {
