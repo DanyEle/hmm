@@ -10,9 +10,9 @@ initialization_phase <- function()
   #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
 
   #DAMEVSKI PRE-PROCESSING
-  #sequences_loaded_list_partitions <- load_marked_sequences_damevski() 
+  sequences_loaded_list_partitions <- load_marked_sequences_damevski() 
   #ALMA PRE-PROCESSING
-  sequences_loaded_list_partitions <- load_marked_sequences_alma()
+  #sequences_loaded_list_partitions <- load_marked_sequences_alma()
   
   sequences_loaded = sequences_loaded_list_partitions[[1]]
   partitions_sequences_loaded = sequences_loaded_list_partitions[[2]]
@@ -57,7 +57,7 @@ initialization_phase <- function()
   
   #Firstly, split the sorted sequences
   #Firstly, take all sortedSequences and find the start and end indexes to split them
-  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), 1) #AMOUNT_WORKERS
+  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), AMOUNT_WORKERS) 
   partitions_sequences_loaded = find_partitions_for_sequences_given_start_end(sortedSequences, start_end_indexes)
   
   
@@ -87,13 +87,22 @@ initialization_phase <- function()
   TransMatrixUnconst = unconstrainedHMM$transProbs
   StartProbsUnconst = unconstrainedHMM$startProbs 
   #Generates a warning, but no problem!
-  LogLikUnconst = logLikHmm(sortedSequences, list(Rho=t(EmissMatrixUnconst), tpm =  TransMatrixUnconst, ispd = StartProbsUnconst ) )
+  #above logLikUnconst
+  remove(HMMInit)
+  remove(parts_theta_frequent_sequences)
+  remove(list_partitions_sequences)
+  remove()
+  gc()
+  #problem here?
+  library("hmm.discnp")
+  #remove elements with length = 0
+  sortedSequencesValid = sortedSequences[sapply(sortedSequences, length) > 0]
+  
+  LogLikUnconst = logLikHmm(sortedSequencesValid, list(Rho=t(EmissMatrixUnconst), tpm =  TransMatrixUnconst, ispd = StartProbsUnconst ) )
   print(paste("Loglik of unconstrained model with same nr of states: ", LogLikUnconst))
   #Was global!!  
   LogLikCur<-LogLikInit
-  
-  
-  return(list(HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst))
+  return(list(HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequencesValid, LogLikUnconst))
 }
 
 
@@ -161,7 +170,7 @@ displaySymbolsPerState <- function(HMMTrained)
     }
     else
     {
-      print(paste("State ", i, " has symbols:"))
+      print(paste("State ", (i - 1), " has symbols:"))
       
     }
     h = 1
@@ -772,6 +781,8 @@ sortSequencesByInterestingness <- function(interestingSequences){
   return (list(newInterestingConditionTypes, newInterestingSequences, newInterestingInterestingness))
 }
 
+
+
 selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained)
 {
   #Apply a reduce to the intersection
@@ -1124,6 +1135,13 @@ combine_sequences_marked <- function(sequences_marked_split)
   merged_data_frames = rbindlist(list_partition)
   
   return(merged_data_frames)
+}
+
+
+show_top_k_interesting_sequences <- function(sortedInterestingSequences, k)
+{
+  topKInterestingSequences = sortedInterestingSequences[[2]][1:k]
+  print(topKInterestingSequences)
 }
 
 

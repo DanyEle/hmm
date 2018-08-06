@@ -50,9 +50,12 @@ main <- function(output_to_file)
   sequences = init[[5]]
   sortedSequences = init[[6]]
   LogLikUnconst = init[[7]]
+  library("parallel")
+  library("HMM")
+  library("hmm.discnp")
   
-  k <- 11
-  while(k <= 15)
+  k <- 1
+  while(k <= 5)
   {
     if(output_to_file == TRUE)
     {
@@ -70,7 +73,8 @@ main <- function(output_to_file)
 
 iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
 {
-    continue=TRUE
+   
+   continue=TRUE
     i = 1
   
     while(continue)
@@ -94,15 +98,18 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     	if(length(interestingSequencesParts[1, ][[1]]) == 0 )
     	{
     	  print(HMMTrained)
-    	  quit("Stopping process. No interesting sequences identified. ")
+    	  print(paste("Stopping process for k = ", k, ". No interesting sequences identified. "))
+    	  break
     	}
     	
     	interestingSequences <- combine_partitions_interesting_sequences(interestingSequencesParts)
     	#Good old sequential version
-    	interestingSequencesSequential <-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
+    	#interestingSequencesSequential <-computeAllSequencesInterestingness(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta)
       	      	
     	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
-    	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)     	
+    	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)   
+    	
+    	show_top_k_interesting_sequences(sortedInterestingSequences, k)
     	
       print(format(Sys.time(), "%a %b %d %X %Y"))
     	print("Building Model with one more state and the following symbols")
