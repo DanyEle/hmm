@@ -30,10 +30,15 @@ load_marked_sequences_alma <- function()
   print(paste("Starting parallel dataset", SOURCE_PATH  , " with ", AMOUNT_WORKERS, " workers"))
   library("parallel")
   
+  #debug: 
+  #partition_dataframe = dataframes_partitions_dataset[[1]]
+  #index = indexes[[1]]
+  #eventPartitions = eventPartitions[[1]]
+  #runtimePartitions = runtimePartitions[[1]]
+  
   #merge_filter_alma_dataset_parallel(partition_dataframe, index, linesReadEvent, linesReadRuntime)
-    
   sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
-                                    eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS ) 
+                                    eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = 1 )  #AMOUNT_WORKERS for cores
 
   print("Finished parallel")
   print(Sys.time())
@@ -170,6 +175,9 @@ filter_messages_for_data_frame <- function(partitionDataFrameMerged, eventPartit
 {
   ####FILTER THE EVENT MESSAGES####
   #Create a data frame based on the events passed
+  #Remove trailining whitespace
+  eventPartitions = trimws(eventPartitions, which=c("right"))
+  
   dataLoadedEvent = read.table(textConnection(eventPartitions[1:length(eventPartitions)]),  header=FALSE,  col.names = c("Level", "Timestamp", "LogID", "Priority", "Audience", "Data", "Null"))
   #However, we are only interested in the "Level" Column actually
   #Indexes of all levels being "Info"
