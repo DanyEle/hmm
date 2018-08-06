@@ -15,7 +15,7 @@ MESSAGES_PER_SEQUENCE = 15
 
 load_marked_sequences_alma <- function()
 {
-  amount_rows = get_amount_rows_from_file(SOURCE_PATH) #OK
+  amount_rows = get_amount_rows_from_file(SOURCE_PATH) 
   #find start and end indexes for the input dataset based on the amount of workers passed
   start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows) 
   #now load up the dataset and break it into smaller partitions consisting of data frames
@@ -38,7 +38,7 @@ load_marked_sequences_alma <- function()
   
   #merge_filter_alma_dataset_parallel(partition_dataframe, index, linesReadEvent, linesReadRuntime)
   sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
-                                    eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = 1 )  #AMOUNT_WORKERS for cores
+                                    eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS )  #AMOUNT_WORKERS for cores
 
   print("Finished parallel")
   print(Sys.time())

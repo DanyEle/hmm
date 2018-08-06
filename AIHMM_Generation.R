@@ -51,8 +51,8 @@ main <- function(output_to_file)
   sortedSequences = init[[6]]
   LogLikUnconst = init[[7]]
   
-  k <- 1
-  while(k <= 5)
+  k <- 11
+  while(k <= 15)
   {
     if(output_to_file == TRUE)
     {

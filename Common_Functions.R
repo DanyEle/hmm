@@ -14,7 +14,6 @@ initialization_phase <- function()
   #ALMA PRE-PROCESSING
   sequences_loaded_list_partitions <- load_marked_sequences_alma()
   
-  
   sequences_loaded = sequences_loaded_list_partitions[[1]]
   partitions_sequences_loaded = sequences_loaded_list_partitions[[2]]
   
@@ -188,20 +187,21 @@ initializeHMM <- function(pathToData, sequences_loaded)
   #old code used for the Gadler et al.'s paper. No need for pre-processing in that case.
   #SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
   #sequences <- mark_sequences_of_actions_with_ID(SampleData)
-  sequences = sequences_loaded
+  #remove all NAs from the sequences, or this will lead to problem in the training phase
+  indexes_not_na = which(!(is.na(sequences_loaded)))
+  sequences = na.omit(sequences_loaded)
+  
   #Compute theta. Solved issue with theta being computed based on the max. sequence ID
   K = length(unique(sequences$SequenceID))
   #just for seeing if it runs faster
   MinLengthSave = 2
   theta = MinLengthSave / K
   print("theta is ")
-  print(theta)
-  
   #initialize HMM with "All data" state
   states = c("All Data")
   #Get M as the number of unique symbols. do not use levels as it memorise the removed symbols: use unique
   symbols <-unique(sequences$sample)
-  M<-length(symbols)
+  #Remove all the "
   
   #now generate a Baum-Welch trained HMM with the values passed.
   # select only the column for the symbols
@@ -319,6 +319,10 @@ baumWelchRecursionFixed <- function (hmm, observations){
   }
   return(list(TransitionMatrix = TransitionMatrix, EmissionMatrix = EmissionMatrix))
 }
+
+
+
+
 
 
 #Sort sequences and their IDs. used in getThetaFrequentSequences
