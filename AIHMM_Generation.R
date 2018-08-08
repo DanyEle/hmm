@@ -166,7 +166,8 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
       	}
     }  
     #print(movedSymbols) 
-    #print(HMMTrained) 
+    print("Final HMM before degrading is:")
+    print(HMMTrained) 
     print(paste("Final Log Likelihood = ", LogLikCur))
     print(paste("Log Likelihood unconstrained = ", LogLikUnconst))
     print(paste("Final Amount of states = " , length(HMMTrained$States)))

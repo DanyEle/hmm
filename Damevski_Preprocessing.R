@@ -3,12 +3,12 @@
 
 
 #Initial "global" variables
-DATA_PATH = "Daniele_Test" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "/home/others/gst_dgadler/HMM/Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
 SEPARATOR = ","
 #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 FREQUENCY_PRINT = 5000
 #Amount of cores to be used
-AMOUNT_WORKERS <<- 1
+AMOUNT_WORKERS <<- 2
 #Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
 
 

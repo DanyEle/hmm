@@ -793,6 +793,7 @@ selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained
   if(amount_valid_symbols == 0)
   {
     print("Stopping process. No new symbols in the interesting sequences can be constrained to the new state. ")
+    displaySymbolsPerState(HMMTrained)
     print(HMMTrained)
     return(list(intersection, FALSE))
   }
@@ -806,6 +807,7 @@ selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained
       if(i >= length(unlist(intersection)))
       {
         print("Stopping process. Not enough new symbols present in the top k-interesting sequences")
+        displaySymbolsPerState(HMMTrained)
         print(HMMTrained)
         return(list(intersection, FALSE))
       }
@@ -894,6 +896,7 @@ computeModelLogLikelihood <- function(sortedSequences, sequences, constrainedTra
   }else{
     #TODO: print HMM.
     print("Stopping process. The log-likelihood is worse than the unconstrained model. The previous model was the best one so far.Printing it here:")
+    displaySymbolsPerState(HMMTrained)
     print(HMMTrained)
     continue=FALSE
     #stop("Stopping process. The log-likelihood is worse than the unconstrained model.")    
