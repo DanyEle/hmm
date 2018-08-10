@@ -773,7 +773,8 @@ remove_empty_partition_indexes <- function(start_end_indexes, length_theta_seque
 }
 
 
-sortSequencesByInterestingness <- function(interestingSequences){
+sortSequencesByInterestingness <- function(interestingSequences)
+{
   r<-order(interestingSequences[[3]])
   newInterestingConditionTypes<-interestingSequences[[1]][r]
   newInterestingSequences<-interestingSequences[[2]][r]
@@ -811,8 +812,8 @@ selectSymbolsTopKInterestingSequences <- function(intersection, q, k, HMMTrained
         print(HMMTrained)
         return(list(intersection, FALSE))
       }
-      print(paste("i = ", i, " length = ", length(unlist(intersection))))
       
+      print(paste("i = ", i, " length = ", length(unlist(intersection))))
       
       toMoveSymbolsCur <- unlist(intersection[which(!q==TRUE)[[i]]])
       toMoveSymbolsUnion <- union(toMoveSymbolsUnion, toMoveSymbolsCur)
@@ -1141,11 +1142,28 @@ combine_sequences_marked <- function(sequences_marked_split)
 }
 
 
-show_top_k_interesting_sequences <- function(sortedInterestingSequences, k)
+show_top_k_interesting_sequences <- function(intersection, k)
 {
-  topKInterestingSequences = sortedInterestingSequences[[2]][1:k]
+  #Firstly, filter sequences, removing all the ones with length == 0
+  interestingSequences = list()
+  
+  j = 1
+  for(i in 1:length(intersection))
+  {
+    if(length(intersection[[i]]) > 0)
+    {
+      print(j)
+      interestingSequences[j] = intersection[i]
+      j = j + 1
+    }
+  }
+  #Fine, now just take the top-k interesting sequences
+  topKInterestingSequences = interestingSequences[1:k]
+  print(paste("Top k =", k , " interesting sequences are:"))
   print(topKInterestingSequences)
+  
 }
+
 
 
 

@@ -109,19 +109,19 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     	#sort interesting sequences from which to select the symbols. It returns: [[1]]=conditionType (1 or 2) [[2]] interesting sequences [[3]] interestingness
     	sortedInterestingSequences<-sortSequencesByInterestingness(interestingSequences)   
     	
-    	show_top_k_interesting_sequences(sortedInterestingSequences, k)
-    	
       print(format(Sys.time(), "%a %b %d %X %Y"))
     	print("Building Model with one more state and the following symbols")
       	
     	#select the symbols in toMoveSymbols that are in ALL DATA state. This is the simplest case in which the expert decides to move symbols only from ALL DATA. 
   		allDataEP<-HMMTrained$emissionProbs[1,]    
     	#The first sequence that has non-empty intersection with ALL DATA state. It returns the a vector of symbols   
+  		#intersection contains the interesting sequences without the symbols already constrained on current states. NB: may contain symbols with length 0
 		  intersection<-as.vector(sapply(sortedInterestingSequences[[2]],function(x)intersect(unlist(x),names(allDataEP[which(!allDataEP==0)]))))
-		  q<-unlist(lapply(intersection,`all.equal`,character(0)))		
+		  show_top_k_interesting_sequences(intersection, k)
+		  #q contains only the sequences with valid length ( > 0)
+		  q<-unlist(lapply(intersection,`all.equal`,character(0)))	
 		  
 		  moveSymbolsContinue <- selectSymbolsTopKInterestingSequences(intersection, q, k, HMMTrained)
-		  
 		  toMoveSymbols = moveSymbolsContinue[[1]]
 		  continue = moveSymbolsContinue[[2]]
 		  
@@ -175,6 +175,8 @@ iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, t
     
     print(paste("DONE in function for k =", k))
 }
+
+
 
 filter_sequences_with_SU_if_needed <- function(sortedSequences)
 {
