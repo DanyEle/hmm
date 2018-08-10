@@ -3,18 +3,18 @@
 
 
 #Initial "global" variables
-DATA_PATH = "/home/others/gst_dgadler/HMM/Datasets_Damevski" #NB: There should be no other file in this folder other than the datasets to load
+DATA_PATH = "/home/daniele/HMM_Parallel/Daniele_Test" #NB: There should be no other file in this folder other than the datasets to load
 SEPARATOR = ","
 #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 FREQUENCY_PRINT = 5000
 #Amount of cores to be used
-AMOUNT_WORKERS <<- 2
+AMOUNT_WORKERS <<- 8
 #Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
 
 
 
 
-##########################
+########################## 
 #####MAIN FUNCTION##############
 #########################
 load_marked_sequences_damevski <- function()
@@ -300,8 +300,12 @@ sort_datasets_names_by_size <- function(names_size_datasets)
   names = names_size_datasets[[1]]
   sizes = names_size_datasets[[2]]
   
-  #Sort the datasets' names according to their size in decreasing order
-  names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
+  if(length(sizes) == 0)
+  {
+    stop(paste("No datasets found in the folder [" , DATA_PATH , "] provided. Did you specify the DATA_PATH correctly?"))
+  }
+    #Sort the datasets' names according to their size in decreasing order
+    names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
   
   return(names_sorted)
 }

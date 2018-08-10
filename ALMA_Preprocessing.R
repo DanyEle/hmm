@@ -110,6 +110,11 @@ get_amount_rows_from_file <- function(source_path)
 {
   #Now, the dataset only consists of one file
   file_source_path <- file(source_path)
+  
+  if(length(file_source_path == 0))
+  {
+    stop(paste("No SOURCE DATASET found in the SOURCE_PATH ", souce_path ," provided. Did you specify the DATA_PATH correctly?"))
+  }
   amount_rows = length(readLines(file_source_path)) - 1 #-1 because of the header in the file
   close(file_source_path)
   return(amount_rows)
