@@ -7,23 +7,25 @@ initialization_phase <- function(dataset_index, input_dataset)
   #Initialization begin
   #Differentiate here between the different datasets to load
   switch(dataset_index,
-         #1
-         {
-            print("Importing Michael Mairegger's dataset")
-           },
-         #2
-         {
-             print("Importing Damevski et al's dataset")
-             #DAMEVSKI PRE-PROCESSING
-             sequences_loaded_list_partitions <- load_marked_sequences_damevski(input_dataset)
-           },
-         #3
-         {
-             sequences_loaded_list_partitions <- load_marked_sequences_alma()
-             print("Importing ALMA dataset")
-        }
+       #1
+       {
+          print("Importing Michael Mairegger's dataset")
+         },
+       #2
+       {
+           source("Damevski_Preprocessing.R")
+           print("Importing Damevski et al's dataset")
+           #DAMEVSKI PRE-PROCESSING
+           sequences_loaded_list_partitions <- load_marked_sequences_damevski(input_dataset)
+         },
+       #3
+       {
+         source("ALMA_Preprocessing.R")
+         print(paste("Importing ALMA dataset from", input_dataset))
+         sequences_loaded_list_partitions <- load_marked_sequences_alma(input_dataset)
+      }
   )
-  #The switch returns squences_loaded_list_partitions
+  #The switch returns sequences_loaded_list_partitions
   ##sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
   #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
 

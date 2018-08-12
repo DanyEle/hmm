@@ -2,15 +2,10 @@
 #Free University of Bolzano-Bozen 2016-2018
 
 
-#Amount of cores to be used
-AMOUNT_WORKERS <<- 8
-
-
-
-
-########################## 
-#####MAIN FUNCTION##############
-#########################
+########################### 
+#####MAIN FUNCTION#########
+###########################
+#"input_dataset" = folder where all the different datasets to load are contained in
 load_marked_sequences_damevski <- function(input_dataset)
 {
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo", "View.File",  "Debug.Debug Break Mode",
@@ -21,19 +16,18 @@ load_marked_sequences_damevski <- function(input_dataset)
   #NB: There should be no other file in this folder other than the datasets to load
   names_size_datasets = load_names_size_datasets(folder_datasets = input_dataset)
   #Sort by the size of each dataset
-  names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets)
+  names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets, folder_datasets = input_dataset)
   
   indexes = find_indices_for_partitions(names_datasets_sorted)
   print("Pre-processing started")
-  print(paste("Processing", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
-  print("Starting parallel")
+  print(paste("Starting dataset pre-processing of ", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
   
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
   
   sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
                                       outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
-  print("Finished parallel")
+  print("Finished dataset pre-processing ")
   print(Sys.time())
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
@@ -293,14 +287,14 @@ load_names_size_datasets <- function(folder_datasets)
   return(list(datasets_names, datasets_sizes))
 }
 
-sort_datasets_names_by_size <- function(names_size_datasets)
+sort_datasets_names_by_size <- function(names_size_datasets, folder_datasets)
 {
   names = names_size_datasets[[1]]
   sizes = names_size_datasets[[2]]
   
   if(length(sizes) == 0)
   {
-    stop(paste("No datasets found in the folder [" , DATA_PATH , "] provided. Did you specify the DATA_PATH correctly?"))
+    stop(paste("No datasets found in the folder [" , folder_datasets , "] provided. Did you specify the input_datasets correctly?"))
   }
     #Sort the datasets' names according to their size in decreasing order
     names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]

@@ -8,9 +8,7 @@
 
 
 
-#source("Damevski_Preprocessing.R")
-#source("Common_Functions.R")
-#source("AIHMM_Generation.R")
+
 
 #amount_workers = INT. parallelism degree (i.e: amount of cores to be used)
 #output_to_file = BOOLEAN. TRUE - Output to a file
@@ -20,19 +18,24 @@
 #                     https://github.com/abb-iss/DeveloperInteractionLogs/tree/master
 #                     3 = ALMA dataset for radio-telescope Java classes' interactions
 #input_dataset = LIST. Contains the dataset (s) to use in the analysis, or the folder where datasets are contained, as in the case of Damevski et al'.
-#Example invocation for (2)
+#Example invocation for (2):
 #generate_hmm_workers(8, FALSE, 2, "Datasets_Damevski")
+#Example invocation for (3):
+#generate_hmm_workers(1, FALSE, 3, c("LogSourceInformation.txt", "LogEventSet.txt", "LogRuntimeInformation.txt"))
+
 #Used to run the initialization phase, followed by the iterative phase with the amount of workers needed
 generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_index=NULL, input_dataset=NULL)
 {
+    source("Common_Functions.R")
     success = validate_input_arguments(amount_workers, output_to_file, dataset_index, input_dataset)  
     if(success == TRUE)
     {
-      print("Valid parameters passed")
+      print("Valid input arguments passed")
     }
     else if(success == FALSE)
     {
-      print("Proper usage: generate_hmm_workers(N, BOOLEAN, INT[1-2-3], String/List)")
+      print("Proper usage: generate_hmm_workers(N, BOOLEAN, INT[1 MM | 2 = Damevsi | 3 ALMA], String/List)")
+      print("Proper usage: generate_hmm_workers(amount_workers, output_to_file, dataset_index, input_dataset")
       stop("Stopping execution")
     }
   
@@ -73,15 +76,12 @@ generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_
       if(output_to_file == TRUE)
       {
         #%X for the time
-        sink(paste("hmm_iterative_phase_", k, "_constrained_interesting_sequences_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
+        sink(paste("hmm_iterative_phase_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
       }
       iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
       k <- k + 1
       print(paste("Now with k = ", k, sep=""))
     }
-    
-    
-      
 } 
 
 validate_input_arguments <- function(amount_workers, output_to_file, dataset_index, input_dataset)
@@ -112,7 +112,6 @@ validate_input_arguments <- function(amount_workers, output_to_file, dataset_ind
   else
   {
     success = TRUE;
-    print("Valid input arguments passed")
   }
   
   return(success)

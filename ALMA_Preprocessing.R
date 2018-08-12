@@ -1,33 +1,36 @@
 #Initial "global" variables
 #Locations of the input files
-SOURCE_PATH = "Datasets_ALMA_Big/LogSourceInformation.txt"
-EVENT_PATH = "Datasets_ALMA_Big/LogEventSet.txt"
-RUNTIME_PATH = "Datasets_ALMA_Big/LogRuntimeInformation.txt"
-#Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
-#Amount of cores to be used
-AMOUNT_WORKERS <<- 8
-#Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
-MESSAGES_PER_SEQUENCE = 15
+#SOURCE_PATH = "Datasets_ALMA/LogSourceInformation.txt"
+#EVENT_PATH = "Datasets_ALMA/LogEventSet.txt"
+#RUNTIME_PATH = "Datasets_ALMA/LogRuntimeInformation.txt"
 
 
-
-
-
-load_marked_sequences_alma <- function()
+########################### 
+#####MAIN FUNCTION#########
+###########################
+#input_dataset = [SOURCE_PATH, EVENT_PATH, RUNTIME_PATH]
+load_marked_sequences_alma <- function(input_dataset)
 {
-  amount_rows = get_amount_rows_from_file(SOURCE_PATH) 
+  MESSAGES_PER_SEQUENCE = 15
+  
+  source_path = input_dataset[1]
+  event_path = input_dataset[2]
+  runtime_path = input_dataset[3]
+  
+  
+  amount_rows = get_amount_rows_from_file(source_path) 
   #find start and end indexes for the input dataset based on the amount of workers passed
   start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows) 
   #now load up the dataset and break it into smaller partitions consisting of data frames
-  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, SOURCE_PATH)  
+  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, source_path)  
   indexes = find_indices_for_partitions(dataframes_partitions_dataset) 
   
   #Now we also need to partition the EVENT_PATH based on the start_end_indexes found
-  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, EVENT_PATH, 5) 
-  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, RUNTIME_PATH, 2) 
+  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, event_path, 5) 
+  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, event_path, 2) 
   
-
-  print(paste("Starting parallel dataset", SOURCE_PATH  , " with ", AMOUNT_WORKERS, " workers"))
+  
+  print(paste("Starting parallel dataset", source_path  , " with ", AMOUNT_WORKERS, " workers"))
   library("parallel")
   
   #debug: 
@@ -37,22 +40,25 @@ load_marked_sequences_alma <- function()
   #runtimePartitions = runtimePartitions[[1]]
   
   #merge_filter_alma_dataset_parallel(partition_dataframe, index, linesReadEvent, linesReadRuntime)
+  
+  print(paste("Reading datasets as table in parallel with", AMOUNT_WORKERS, " workers"))
+  
   sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
-                                    eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS )  #AMOUNT_WORKERS for cores
-
+                                          eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS ) 
+        
   print("Finished parallel")
   print(Sys.time())
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
-  
+    
   return(list(sequences_marked, sequences_marked_split))
 }
 
 
-#Merge the "File" and "Routine" columns, then remove all the ones not matching the condition for it
+#Merge the "File" and "Routine" columns, then remove all the ones not matching the condition for them
 merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, eventPartitions, runtimePartitions)
 {
-  print("Reading table in parallel...")
+  
   #getting the linesRead as input, now actually turning them into a proper data frame
   partition_dataframe = read.table(textConnection(partition_dataframe), col.names = c("File", "Line", "Routine"), header=T)
   
@@ -67,8 +73,7 @@ merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, event
   
   print("Filtering messages")
   sampleMessagesPartition = filter_messages_for_data_frame(partitionDataFrameMerged, eventPartitions, runtimePartitions)
-  #  sequenceIDs = find_sequence_ids_given_messages(sampleMessagesPartition, index)
-
+  #sequenceIDs = find_sequence_ids_given_messages(sampleMessagesPartition, index)
   
   #now assign one sequence ID to every message of the data frame, after filtering them
   dataFrameReturn = data.frame(data.frame(matrix(ncol = 2, nrow = length(sampleMessagesPartition$SequenceID))))
@@ -111,9 +116,9 @@ get_amount_rows_from_file <- function(source_path)
   #Now, the dataset only consists of one file
   file_source_path <- file(source_path)
   
-  if(length(file_source_path == 0))
+  if(length(file_source_path) == 0)
   {
-    stop(paste("No SOURCE DATASET found in the SOURCE_PATH ", souce_path ," provided. Did you specify the DATA_PATH correctly?"))
+    stop(paste("No SOURCE DATASET found in the SOURCE_PATH ", source_path ," provided. Did you specify the source_dataset correctly?"))
   }
   amount_rows = length(readLines(file_source_path)) - 1 #-1 because of the header in the file
   close(file_source_path)
@@ -199,7 +204,7 @@ filter_messages_for_data_frame <- function(partitionDataFrameMerged, eventPartit
   
   #now get all messages (rows) in the data frame at the indexes provided
   messages_filtered = partitionDataFrameMerged[indexesIntersectionRunTimeEvent, ]
-
+  
   return(messages_filtered)
 }
 
@@ -215,7 +220,7 @@ find_start_end_indexes_dataset <- function(messages_seq, amount_workers, dataset
   for(i in 1:amount_workers)
   {
     remaining_rows_per_partition = dataset_partition_size - (floor(dataset_partition_size / messages_seq) * messages_seq)
-
+    
     partition_sizes[i] = dataset_partition_size - remaining_rows_per_partition
   }
   
@@ -225,7 +230,7 @@ find_start_end_indexes_dataset <- function(messages_seq, amount_workers, dataset
   partition_sizes[length(partition_sizes)] = partition_sizes[length(partition_sizes)] + remaining_rows
   
   #nb: finally, sum(partition_sizes) == dataset_size
-
+  
   #Good, all sizes found Now find the start and end indexes for each partition
   start_indexes = c()
   end_indexes = c()
