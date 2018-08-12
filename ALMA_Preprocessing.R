@@ -1,5 +1,6 @@
 #Initial "global" variables
 #Locations of the input files
+#Now passing these variables as arguments to the function call itself
 #SOURCE_PATH = "Datasets_ALMA/LogSourceInformation.txt"
 #EVENT_PATH = "Datasets_ALMA/LogEventSet.txt"
 #RUNTIME_PATH = "Datasets_ALMA/LogRuntimeInformation.txt"

@@ -9,7 +9,9 @@ initialization_phase <- function(dataset_index, input_dataset)
   switch(dataset_index,
        #1
        {
+          source("MM_Preprocessing.R")
           print("Importing Michael Mairegger's dataset")
+          sequences_loaded_list_partitions <- load_marked_sequences_mm(input_dataset)
          },
        #2
        {
@@ -34,7 +36,7 @@ initialization_phase <- function(dataset_index, input_dataset)
   
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print(paste("Initializing the process..."))
-  initialisedProcess<-initializeHMM(pathToData, sequences_loaded)
+  initialisedProcess<-initializeHMM(sequences_loaded)
   #sequenceIDs is also sequences_global$sample
   
   sequences<-initialisedProcess[[1]]
@@ -206,11 +208,8 @@ displaySymbolsPerState <- function(HMMTrained)
 
 
 #To pre-process the dataset and train HMM. It computes theta
-initializeHMM <- function(pathToData, sequences_loaded)
+initializeHMM <- function(sequences_loaded)
 {   
-  #old code used for the Gadler et al.'s paper. No need for pre-processing in that case.
-  #SampleData <- read.csv(pathToData, sep=SEPARATOR, header=T)
-  #sequences <- mark_sequences_of_actions_with_ID(SampleData)
   #remove all NAs from the sequences, or this will lead to problem in the training phase
   indexes_not_na = which(!(is.na(sequences_loaded)))
   sequences = na.omit(sequences_loaded)
