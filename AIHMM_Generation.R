@@ -12,63 +12,111 @@
 #source("Common_Functions.R")
 #source("AIHMM_Generation.R")
 
-#N = INT. parallelism degree (i.e: amount of cores to be used)
+#amount_workers = INT. parallelism degree (i.e: amount of cores to be used)
 #output_to_file = BOOLEAN. TRUE - Output to a file
 #                          FALSE - Output to the console
-#run_experiment_workers(N, boolean)
+#dataset_index = INT. 1 = Michael Mairegger's dataset of mobile interactions
+#                     2 = Damevski et al.'s dataset for visual studio IDE interactions
+#                     https://github.com/abb-iss/DeveloperInteractionLogs/tree/master
+#                     3 = ALMA dataset for radio-telescope Java classes' interactions
+#input_dataset = LIST. Contains the dataset (s) to use in the analysis, or the folder where datasets are contained, as in the case of Damevski et al'.
+#Example invocation for (2)
+#generate_hmm_workers(8, FALSE, 2, "Datasets_Damevski")
 #Used to run the initialization phase, followed by the iterative phase with the amount of workers needed
-generate_hmm_workers <- function(amount_workers, output_to_file)
+generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_index=NULL, input_dataset=NULL)
 {
-      print(paste("Starting initialization phase for amount of workers = ", amount_workers))
-      AMOUNT_WORKERS <<- amount_workers
-      main(output_to_file)
-} 
-
-main <- function(output_to_file)
-{
+    success = validate_input_arguments(amount_workers, output_to_file, dataset_index, input_dataset)  
+    if(success == TRUE)
+    {
+      print("Valid parameters passed")
+    }
+    else if(success == FALSE)
+    {
+      print("Proper usage: generate_hmm_workers(N, BOOLEAN, INT[1-2-3], String/List)")
+      stop("Stopping execution")
+    }
   
-  #In the initialization phase, we pre-process the dataset and create the initial HMM based on the found observations,
-  #passing the so generated HMM to the iterative phase.
-  if(output_to_file == TRUE)
-  { #%X for the time
-    sink(paste("hmm_initialization_phase_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
-  }
-  
-  init = initialization_phase()  
-  
-  if(output_to_file == TRUE)
-  {
-    print("Initialization phase completed")
-  }
-  
-  
-  #Uncomment just for debugging the iterative phase
-  HMMTrained = init[[1]]
-  thetaFrequentSequences = init[[2]]
-  theta = init[[3]]
-  logLikCur = init[[4]]
-  sequences = init[[5]]
-  sortedSequences = init[[6]]
-  LogLikUnconst = init[[7]]
-  library("parallel")
-  library("HMM")
-  library("hmm.discnp")
-  
-  k <- 1
-  while(k <= 5)
-  {
+    print(paste("Starting initialization phase for amount of workers = ", amount_workers))
+    AMOUNT_WORKERS <<- amount_workers
+    
+    #In the initialization phase, we pre-process the dataset and create the initial HMM based on the found observations,
+    #passing the so generated HMM to the iterative phase.
+    if(output_to_file == TRUE)
+    { #%X for the time
+      sink(paste("hmm_initialization_phase_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
+    }
+    
+    #NB: Only the initialization phase differs from dataset to dataset. The iterative phase is equal for any dataset
+    init = initialization_phase(dataset_index, input_dataset)  
+    
     if(output_to_file == TRUE)
     {
-      #%X for the time
-      sink(paste("hmm_iterative_phase_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
+      print("Initialization phase completed")
     }
-    iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
-    k <- k + 1
-    print(paste("Now with k = ", k, sep=""))
+    
+    
+    #Uncomment just for debugging the iterative phase
+    # HMMTrained = init[[1]]
+    # thetaFrequentSequences = init[[2]]
+    # theta = init[[3]]
+    # logLikCur = init[[4]]
+    # sequences = init[[5]]
+    # sortedSequences = init[[6]]
+    # LogLikUnconst = init[[7]]
+    # library("parallel")
+    # library("HMM")
+    # library("hmm.discnp")
+    
+    k <- 1
+    while(k <= 5)
+    {
+      if(output_to_file == TRUE)
+      {
+        #%X for the time
+        sink(paste("hmm_iterative_phase_", k, "_constrained_interesting_sequences_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
+      }
+      iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
+      k <- k + 1
+      print(paste("Now with k = ", k, sep=""))
+    }
+    
+    
+      
+} 
+
+validate_input_arguments <- function(amount_workers, output_to_file, dataset_index, input_dataset)
+{
+  success = FALSE
+  
+  #Firstly, validate input
+  if(!(amount_workers %% 1 == 0))
+  {
+    print("You must pass a valid integer number as amount_workers")
+  }
+  else if(is.null(output_to_file))
+  {
+    print("You must pass either TRUE or FALSE as output_to_file")
+  }
+  else if(!(dataset_index == 1  || dataset_index == 2 || dataset_index == 3))
+  {
+    print("You must pass either '1' or '2' or '3' as dataset_index")
+  }
+  else if(is.null(dataset_index))
+  {
+    print("You must pass either TRUE or FALSE as output_to_file")
+  }
+  else if (is.null(input_dataset))
+  {
+    print("You must pass a valid input_dataset")
+  }
+  else
+  {
+    success = TRUE;
+    print("Valid input arguments passed")
   }
   
+  return(success)
 }
-
 
 
 iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)

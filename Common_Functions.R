@@ -2,18 +2,31 @@
 #Free University of Bolzano-Bozen 2016-2018
 
 
-
-initialization_phase <- function()
+initialization_phase <- function(dataset_index, input_dataset)
 {
   #Initialization begin
-  #sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
+  #Differentiate here between the different datasets to load
+  switch(dataset_index,
+         #1
+         {
+            print("Importing Michael Mairegger's dataset")
+           },
+         #2
+         {
+             print("Importing Damevski et al's dataset")
+             #DAMEVSKI PRE-PROCESSING
+             sequences_loaded_list_partitions <- load_marked_sequences_damevski(input_dataset)
+           },
+         #3
+         {
+             sequences_loaded_list_partitions <- load_marked_sequences_alma()
+             print("Importing ALMA dataset")
+        }
+  )
+  #The switch returns squences_loaded_list_partitions
+  ##sequences_loaded_list_partitions[[1]] = sequences_loaded. (All sequences loaded)
   #sequences_loaded_list_partitions[[2]] = partitions_sequences_loaded partitions of all different sequences that have been loaded
 
-  #DAMEVSKI PRE-PROCESSING
-  sequences_loaded_list_partitions <- load_marked_sequences_damevski() 
-  #ALMA PRE-PROCESSING
-  #sequences_loaded_list_partitions <- load_marked_sequences_alma()
-  
   sequences_loaded = sequences_loaded_list_partitions[[1]]
   partitions_sequences_loaded = sequences_loaded_list_partitions[[2]]
   
@@ -1152,7 +1165,7 @@ show_top_k_interesting_sequences <- function(intersection, k)
   {
     if(length(intersection[[i]]) > 0)
     {
-      print(j)
+      #print(j)
       interestingSequences[j] = intersection[i]
       j = j + 1
     }

@@ -2,14 +2,8 @@
 #Free University of Bolzano-Bozen 2016-2018
 
 
-#Initial "global" variables
-DATA_PATH = "/home/daniele/HMM_Parallel/Daniele_Test" #NB: There should be no other file in this folder other than the datasets to load
-SEPARATOR = ","
-#Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
-FREQUENCY_PRINT = 5000
 #Amount of cores to be used
 AMOUNT_WORKERS <<- 8
-#Used to keep track of the time spent in the sequential and (potentially) parallel parts of the program
 
 
 
@@ -17,15 +11,15 @@ AMOUNT_WORKERS <<- 8
 ########################## 
 #####MAIN FUNCTION##############
 #########################
-load_marked_sequences_damevski <- function()
+load_marked_sequences_damevski <- function(input_dataset)
 {
-  
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo", "View.File",  "Debug.Debug Break Mode",
                          "Debug.Debug Run Mode",  "Debug.DebugType", "Debug.Enter Design Mode" ,"Build.BuildDone", "Build.BuildBegin")
   
   #names_size_datasets[[1]] = Vector containing names of all datasets
   #names_size_datasets[[2]] = Vector containing size of all datasets (in bytes)
-  names_size_datasets = load_names_size_datasets(DATA_PATH)
+  #NB: There should be no other file in this folder other than the datasets to load
+  names_size_datasets = load_names_size_datasets(folder_datasets = input_dataset)
   #Sort by the size of each dataset
   names_datasets_sorted = sort_datasets_names_by_size(names_size_datasets)
   
@@ -138,7 +132,7 @@ find_splitting_point_different_developer <- function(start,  sampleObs, i, no_co
 load_filter_dataset_given_name_parallel <- function(dataset_name, outlier_symbols, index)
 {
   #Great, now load the dataset passed and remove outliers from it
-  dataLoaded = read.csv(dataset_name, sep=SEPARATOR, header=T)
+  dataLoaded = read.csv(dataset_name, sep=",", header=T)
   #outliers removed
   sampleObs = load_filter_single_dataset(outlier_symbols, dataLoaded)
   
@@ -175,7 +169,11 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
 
 
 
-mark_debug_sessions_with_ID <- function(sampleObs, index){
+mark_debug_sessions_with_ID <- function(sampleObs, index)
+{
+  #how often we should print an update msg
+  #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
+  FREQUENCY_PRINT = 5000
   
   print(paste("Processing partition of size", nrow(sampleObs)))
   
