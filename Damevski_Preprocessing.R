@@ -305,5 +305,25 @@ sort_datasets_names_by_size <- function(names_size_datasets, folder_datasets)
 
 
 
+#Stuff to compute probability from the log-likelihood
+count_lines_all_datasets <- function(names_datasets_sorted)
+{
+ #sum the amount of lines in every single dataset 
+  
+ amount_elements_per_dataset = sapply(names_datasets_sorted , function(x) nrow(read.csv(x, sep=",", header=T)))
+ 
+ amount_lines_all_dataset = sum(amount_elements_per_dataset)
+ 
+ return(amount_lines_all_dataset)
+}
+
+convert_log_lik_into_probability <- function(amount_lines_all_datasets, logLikelihood)
+{
+  return(exp(logLikelihood / amount_lines_all_datasets ))
+}
+
+
+
+
 
 
