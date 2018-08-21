@@ -163,7 +163,154 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
 
 
 
-mark_debug_sessions_with_ID <- function(sampleObs, index)
+mark_debug_sessions_with_ID <- function(sampleObs, index_initial)
+{
+  #how often we should print an update msg
+  #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
+
+  print(paste("Marking all the messages in data frame of size", nrow(sampleObs)," with a debug sequence ID"))
+  
+  
+  #List of messages representing interactions of developers with Visual Studio IDE for debugging
+  msgs_IDE_interactions = ('^Debug.ToggleBreakpoint|Debug.CallStack|View.Call Stack|Debug.Start|Debug.StepOver|Debug.StepInto|Debug.StepOut|
+                           Debug.AttachtoProcess|Debug.StartDebugTarget|Debug.StopDebugging|Debug.QuickWatch|Debug.AddWatch|View.Watch 1|
+                           Debug.DisableAllBreakpoints|Debug.DetachAll|Debug.Restart|Debug.RunToCursor|Debug.EnableAllBreakpoints|
+                           Debug.ShowNextStatement|Debug.BreakatFunction|Debug.StartPerformanceAnalysis|Debug.AddParallelWatch|
+                           Debug.Threads|Debug.Disassembly|Debug.GoToDisassembly|Debug.EvaluateStatement|Debug.SetNextStatement|
+                           Debug.Exceptions|Debug.BreakAll|Debug.Breakpoints|Debug.AddParallelWatch|Debug.Watch1|Debug.Modules|
+                           Debug.Output|Debug.Print|Debug.DeleteAllBreakpoints|TestExplorer.DebugSelectedTests|
+                           TestExplorer.DebugAllTestsInContext|TestExplorer.DebugAllTests|View.Locals$')
+  
+  
+  indexes_matches <-grep(pattern=msgs_IDE_interactions, sampleObs$sample, invert=F)
+  last_timestamp = strptime(sampleObs$timestamp[1], format="%Y-%m-%d %H:%M:%S")
+  #if a sequence ID is 0, then the sequence is not part of a debugging session
+  sequenceIds = c(0*1:nrow(sampleObs))
+
+  time_before_loop = proc.time()
+  
+  index = index_initial
+  
+  
+  #no need to add checks to the developers, as different datasets (and developers) are processed independently
+  for(i in 1: (nrow(sampleObs)))
+  {
+    cur_timestamp = strptime(sampleObs$timestamp[i], format="%Y-%m-%d %H:%M:%S")
+    
+    #30 seconds have not elapsed yet. 
+    if(cur_timestamp <= (last_timestamp + 30))
+    {
+      #if within 30 seconds, just add it to the current sequence
+      sequenceIds[i] = index
+      
+      #NB: we only update the timestamp if we don't have a debug msg
+      if(!(i %in% indexes_matches))
+      {
+        last_timestamp = cur_timestamp
+      }
+    }
+    #30 seconds have elapsed. 
+    else
+    {
+      #if it's a debug msg, then save the sequence so far and increase the index
+      if(i %in% indexes_matches)
+      {
+        sequenceIds[i] = index
+        index = index + 1
+      }
+      #not a debug msg, then just add it to the current sequence
+      else
+      {
+        sequenceIds[i] = index
+      }
+      last_timestamp = cur_timestamp
+     
+    }
+    
+    if(i %% FREQUENCY_PRINT == 0)
+    {
+      print(paste(i, " messages have been processed."))
+    }
+  }
+  
+  time_after_loop = proc.time()
+  elapsed_time = time_after_loop[3] - time_before_loop[3]
+  print(paste("Algorithm has run in ", elapsed_time, "s for data frame of size", nrow(sampleObs)))
+  
+  sampleObs$SequenceID<-sequenceIds
+  #now remove from the data frame all the sequences that are marked with a sequence ID = 0
+  sampleObsOutput = sampleObs[which(sampleObs$SequenceID != 0), ]
+  
+  last_sequence_id = sampleObsOutput$SequenceID[nrow(sampleObsOutput)]
+  amount_sequences = last_sequence_id - index_initial + 1
+  
+  print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
+  
+  return(sampleObsOutput)	
+}
+
+
+load_names_size_datasets <- function(folder_datasets)
+{
+  all_datasets = list.files(path=folder_datasets)
+  
+  #Array of all unique developers
+  datasets_names = c()
+  #Array of all unique messages corresponding to one developer
+  datasets_sizes = c()
+  print(paste("Getting all datasets' names and sizes in the folder ", folder_datasets))
+  i = 1
+  for (dataset in all_datasets)
+  {
+    dataset_name = paste(folder_datasets,"/", dataset, sep="")
+    datasets_names[i] <- dataset_name
+    datasets_sizes[i] <- file.size(dataset_name)
+    i = i + 1
+  }
+  
+  return(list(datasets_names, datasets_sizes))
+}
+
+sort_datasets_names_by_size <- function(names_size_datasets, folder_datasets)
+{
+  names = names_size_datasets[[1]]
+  sizes = names_size_datasets[[2]]
+  
+  if(length(sizes) == 0)
+  {
+    stop(paste("No datasets found in the folder [" , folder_datasets , "] provided. Did you specify the input_datasets correctly?"))
+  }
+    #Sort the datasets' names according to their size in decreasing order
+    names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
+  
+  return(names_sorted)
+}
+
+
+
+
+
+#Stuff to compute probability from the log-likelihood
+#Input: vector of all datasets' names
+#Output:  (int) the sum of the amount of lines in all datasets
+count_lines_all_datasets <- function(names_datasets_sorted)
+{
+ #sum the amount of lines in every single dataset 
+ amount_elements_per_dataset = sapply(names_datasets_sorted , function(x) nrow(read.csv(x, sep=",", header=T)))
+ 
+ amount_lines_all_dataset = sum(amount_elements_per_dataset)
+ 
+ return(amount_lines_all_dataset)
+}
+
+log_lik_to_probability <- function(amount_lines, logLikelihood)
+{
+  return(exp(logLikelihood / amount_lines))
+}
+
+
+
+mark_debug_sessions_with_ID_daniele <- function(sampleObs, index)
 {
   #how often we should print an update msg
   #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
@@ -185,7 +332,7 @@ mark_debug_sessions_with_ID <- function(sampleObs, index)
   
   
   indexes_matches <-grep(pattern=msgs_IDE_interactions, sampleObs$sample, invert=F)
- 
+  
   last_timestamp = strptime(sampleObs$timestamp[1], format="%Y-%m-%d %H:%M:%S")
   last_developer = sampleObs$developer[1]
   
@@ -193,7 +340,7 @@ mark_debug_sessions_with_ID <- function(sampleObs, index)
   sequenceIds = c(0*1:nrow(sampleObs))
   
   print(paste("Marking all the messages in data frame of size", nrow(sampleObs)," with a debug sequence ID"))
-
+  
   time_before_loop = proc.time()
   
   for(i in 1: (nrow(sampleObs)))
@@ -263,63 +410,6 @@ mark_debug_sessions_with_ID <- function(sampleObs, index)
   print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
   
   return(sampleObsOutput)	
-}
-
-
-load_names_size_datasets <- function(folder_datasets)
-{
-  all_datasets = list.files(path=folder_datasets)
-  
-  #Array of all unique developers
-  datasets_names = c()
-  #Array of all unique messages corresponding to one developer
-  datasets_sizes = c()
-  print(paste("Getting all datasets' names and sizes in the folder ", folder_datasets))
-  i = 1
-  for (dataset in all_datasets)
-  {
-    dataset_name = paste(folder_datasets,"/", dataset, sep="")
-    datasets_names[i] <- dataset_name
-    datasets_sizes[i] <- file.size(dataset_name)
-    i = i + 1
-  }
-  
-  return(list(datasets_names, datasets_sizes))
-}
-
-sort_datasets_names_by_size <- function(names_size_datasets, folder_datasets)
-{
-  names = names_size_datasets[[1]]
-  sizes = names_size_datasets[[2]]
-  
-  if(length(sizes) == 0)
-  {
-    stop(paste("No datasets found in the folder [" , folder_datasets , "] provided. Did you specify the input_datasets correctly?"))
-  }
-    #Sort the datasets' names according to their size in decreasing order
-    names_sorted = sort(names)[ order(sizes, decreasing = TRUE)]
-  
-  return(names_sorted)
-}
-
-
-
-
-#Stuff to compute probability from the log-likelihood
-count_lines_all_datasets <- function(names_datasets_sorted)
-{
- #sum the amount of lines in every single dataset 
-  
- amount_elements_per_dataset = sapply(names_datasets_sorted , function(x) nrow(read.csv(x, sep=",", header=T)))
- 
- amount_lines_all_dataset = sum(amount_elements_per_dataset)
- 
- return(amount_lines_all_dataset)
-}
-
-convert_log_lik_into_probability <- function(amount_lines_all_datasets, logLikelihood)
-{
-  return(exp(logLikelihood / amount_lines_all_datasets ))
 }
 
 
