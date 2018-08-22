@@ -365,7 +365,7 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
   print("Generating lists for sequences done")
-  beep()
+  #beep()
   
   #NB: All sequencesLists are LISTS where one element of the list contains one sequence (i.e: many elements of it)
 	
@@ -378,21 +378,25 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   
   print("Flattening done")
 
+  #we're going to need to return these sequences!!
   library("naturalsort")
+  
+  #just consider the first 3000 sequences
+  sequencesLists1 = sequencesLists1[1:(min(3000, length(sequencesLists1)))]
+  sequencesLists2 = sequencesLists2[1:(min(3000, length(sequencesLists1)))]
   
   #order sequences and IDs
   #r contains the order of the elements
   r <- naturalorder(sequencesLists1)
   #now order according to the numbers found
-  sequencesLists1Sorted = sequencesLists1[r]
-  sequencesList2Sorted = sequencesList2[r]
+  sequencesList1Sorted = sequencesLists1[r]
+  sequencesList2Sorted = sequencesLists2[r]
   
+   names(sequencesList1Sorted)<-rep("sequence",length(sequencesList1Sorted))
+   names(sequencesList2Sorted)<-rep("sequenceID",length(sequencesList2Sorted))	
+  
+  return(list(sequencesList1Sorted, sequencesList2Sorted))
   #now order the sequenceIDs according to the order found
-  
-  #y[sort(order(y)[x])]
-  
-  
-
   
   #get the amount of elements in every single element of the list "sequencesLists", i.e: the sequence length
  # sequenceLengths <- unlist(sapply(sequencesLists, nrow))  #get length of all sequences
@@ -420,44 +424,43 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
  # dataNormalized1 <- as.data.frame(do.call(rbind,lapply(sequencesLists1, `length<-`,max(unlist(sequenceLengths)))),stringsAsFactors=FALSE)
   #dataNormalized2 <- as.data.frame(do.call(rbind,lapply(sequencesLists2, `length<-`,max(unlist(sequenceLengths)))))
   
-  
-  print("Processing as data frame done")
-  beep()
-  
-  #order sequences and IDs
-  #r contains the order of the elements
-  r<-do.call(order,as.list(dataNormalized1))
-  myDataFrameS<-dataNormalized1[r,]
-  myDataFrameID<-dataNormalized2[r,]
-  newDataFrameS<-sapply(myDataFrameS,as.vector)
-  newDataFrameID<-sapply(myDataFrameID,as.vector)
-  colnames(newDataFrameS)<-NULL
-  colnames(newDataFrameID)<-NULL
-	
-  print("Function application done")
-  beep()
-  
-  #remove NA values form each sequence	
-  orderedSequences<-list()
-  orderedIDs<-list()
-  
-  for (i in 1:nrow(myDataFrameS))
-  {
-    #Damevski
-    #orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
-    #orderedIDs[[i]]<-newDataFrameID[i,][-which(is.na(newDataFrameID[i,]))]
-    #ALMA
-    orderedSequences[[i]]<-newDataFrameS[i,][which(!(is.na(newDataFrameS[i,])))]
-    orderedIDs[[i]]<-newDataFrameID[i,][which(!(is.na(newDataFrameID[i,])))]
-  }
-  
-  print("NAs' removal done")
-  beep()
-  
-  names(orderedSequences)<-rep("sequence",length(orderedSequences))
-  names(orderedIDs)<-rep("sequenceID",length(orderedIDs))	  
-  
-  return (list(orderedSequences, orderedIDs)) 
+  # print("Processing as data frame done")
+  # beep()
+  # 
+  # #order sequences and IDs
+  # #r contains the order of the elements
+  # r<-do.call(order,as.list(dataNormalized1))
+  # myDataFrameS<-dataNormalized1[r,]
+  # myDataFrameID<-dataNormalized2[r,]
+  # newDataFrameS<-sapply(myDataFrameS,as.vector)
+  # newDataFrameID<-sapply(myDataFrameID,as.vector)
+  # colnames(newDataFrameS)<-NULL
+  # colnames(newDataFrameID)<-NULL
+  # 
+  # print("Function application done")
+  # beep()
+  # 
+  # #remove NA values form each sequence	
+  # orderedSequences<-list()
+  # orderedIDs<-list()
+  # 
+  # for (i in 1:nrow(myDataFrameS))
+  # {
+  #   #Damevski
+  #   #orderedSequences[[i]]<-newDataFrameS[i,][-which(is.na(newDataFrameS[i,]))]
+  #   #orderedIDs[[i]]<-newDataFrameID[i,][-which(is.na(newDataFrameID[i,]))]
+  #   #ALMA
+  #   orderedSequences[[i]]<-newDataFrameS[i,][which(!(is.na(newDataFrameS[i,])))]
+  #   orderedIDs[[i]]<-newDataFrameID[i,][which(!(is.na(newDataFrameID[i,])))]
+  # }
+  # 
+  # print("NAs' removal done")
+  # beep()
+  # 
+  # names(orderedSequences)<-rep("sequence",length(orderedSequences))
+  # names(orderedIDs)<-rep("sequenceID",length(orderedIDs))	  
+  # 
+  # return (list(orderedSequences, orderedIDs)) 
 }
 
 
