@@ -77,7 +77,7 @@ generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_
         #%X for the time
         sink(paste("hmm_iterative_phase_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
       }
-      iterative_phase(DATA_PATH, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
+      iterative_phase(k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
       k <- k + 1
       print(paste("Now with k = ", k, sep=""))
     }
@@ -117,7 +117,7 @@ validate_input_arguments <- function(amount_workers, output_to_file, dataset_ind
 }
 
 
-iterative_phase <- function(pathToData, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
+iterative_phase <- function(k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
 {
    
    continue=TRUE
