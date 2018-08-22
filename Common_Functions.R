@@ -359,9 +359,13 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   #convert partitions into data frame
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
+  print("Generating lists for sequences done")
+  
   sequencesLists = flatten(parts_lists[1, ])
   sequencesLists1 = flatten(parts_lists[2, ])
   sequencesLists2 = flatten(parts_lists[3, ])
+  
+  print("Flattening done")
   
   #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. 
   #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
@@ -371,6 +375,8 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   sequenceLengths <- sapply(sequencesLists, nrow)  
   dataNormalized1 <- as.data.frame(do.call(rbind,lapply(sequencesLists1, `length<-`,max(unlist(sequenceLengths)))),stringsAsFactors=FALSE)
   dataNormalized2 <- as.data.frame(do.call(rbind,lapply(sequencesLists2, `length<-`,max(unlist(sequenceLengths)))))
+  
+  print("Processing as data frame done")
   
   #order sequences and IDs
   r<-do.call(order,as.list(dataNormalized1))
@@ -393,8 +399,10 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
     #ALMA
     orderedSequences[[i]]<-newDataFrameS[i,][which(!(is.na(newDataFrameS[i,])))]
     orderedIDs[[i]]<-newDataFrameID[i,][which(!(is.na(newDataFrameID[i,])))]
-    
   }
+  
+  print("NAs' removal done")
+  
   names(orderedSequences)<-rep("sequence",length(orderedSequences))
   names(orderedIDs)<-rep("sequenceID",length(orderedIDs))	  
   

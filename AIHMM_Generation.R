@@ -57,7 +57,6 @@ generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_
       print("Initialization phase completed")
     }
     
-    
     #Uncomment just for debugging the iterative phase
     # HMMTrained = init[[1]]
     # thetaFrequentSequences = init[[2]]

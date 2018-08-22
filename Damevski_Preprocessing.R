@@ -165,6 +165,7 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
 
 mark_debug_sessions_with_ID <- function(sampleObs, index_initial)
 {
+  FREQUENCY_PRINT = 5000
   #how often we should print an update msg
   #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
 
