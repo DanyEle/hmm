@@ -34,6 +34,8 @@ initialization_phase <- function(dataset_index, input_dataset)
   sequences_loaded = sequences_loaded_list_partitions[[1]]
   partitions_sequences_loaded = sequences_loaded_list_partitions[[2]]
   
+  remove(sequences_loaded_list_partitions)
+  
   print(format(Sys.time(), "%a %b %d %X %Y"))
   print(paste("Initializing the process..."))
   initialisedProcess<-initializeHMM(sequences_loaded)
@@ -48,8 +50,9 @@ initialization_phase <- function(dataset_index, input_dataset)
   HMMTrained<-initialisedProcess[[4]]
   
   #create two lists: a list of sequences [[1]] and the corresponding list of IDs [[2]]. The list of seqeunces is also sorted (and accordingly the list of IDs)
-  #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it. 
+  #DANIELE LOAD BEFOREHAND. Can do this once, load it in memory, then no longer need to do it.  basically convert into lists
   list_partitions_sequences = find_list_partitions_given_data_frame_partitions(partitions_sequences_loaded)
+  remove(partitions_sequences_loaded)
   
   #Not really parallel. Only uses 1 worker, but multiple partitions. 
   sortedSequencesIDs <- sortSequencesWithIDs(list_partitions_sequences)
@@ -79,7 +82,6 @@ initialization_phase <- function(dataset_index, input_dataset)
   
   
   #To run with a large amount of workers(?)
-  remove(sequences_loaded_list_partitions)
   remove(sequences_loaded)
   remove(sortedSequencesIDs)
   gc()
@@ -356,29 +358,74 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   print("Sorting sequences and IDs")	
   library("parallel")
   library("purrr")
+  library("beepr")
   #convert partitions into data frame
+	
+  #put together sample elements with the same sequence ID
   parts_lists = mcmapply(generateListsforSequences, sequences=list_partitions_sequences, mc.cores=1)
   
   print("Generating lists for sequences done")
+  beep()
   
+  #NB: All sequencesLists are LISTS where one element of the list contains one sequence (i.e: many elements of it)
+	
+  #contains the sample, the timestamp, developer ID and sequenceID
   sequencesLists = flatten(parts_lists[1, ])
+  #contains just the sample
   sequencesLists1 = flatten(parts_lists[2, ])
+  #Contains all the developer IDs
   sequencesLists2 = flatten(parts_lists[3, ])
   
   print("Flattening done")
-  
-  #Normalise the lenght of each list element to the max sequence length. It creates NA to fill the length. 
-  #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
-  #It removes the null elements, i.e. i=3
-  
-  #get the amount of elements in every single element of the list "sequencesLists", i.e: the sequence length
-  sequenceLengths <- sapply(sequencesLists, nrow)  
-  dataNormalized1 <- as.data.frame(do.call(rbind,lapply(sequencesLists1, `length<-`,max(unlist(sequenceLengths)))),stringsAsFactors=FALSE)
-  dataNormalized2 <- as.data.frame(do.call(rbind,lapply(sequencesLists2, `length<-`,max(unlist(sequenceLengths)))))
-  
-  print("Processing as data frame done")
+
+  library("naturalsort")
   
   #order sequences and IDs
+  #r contains the order of the elements
+  r <- naturalorder(sequencesLists1)
+  #now order according to the numbers found
+  sequencesLists1Sorted = sequencesLists1[r]
+  sequencesList2Sorted = sequencesList2[r]
+  
+  #now order the sequenceIDs according to the order found
+  
+  #y[sort(order(y)[x])]
+  
+  
+
+  
+  #get the amount of elements in every single element of the list "sequencesLists", i.e: the sequence length
+ # sequenceLengths <- unlist(sapply(sequencesLists, nrow))  #get length of all sequences
+  #This is used to convert our lists in data.frame. length(sequenceLenghts) gives the number of sequences. 
+  #It removes the null elements, i.e. i=3
+	#"expand" the length of the list of sequences to the max possible length. NAs will be put in place of missing elements
+	#the problem lies here. However, this is a data-parallel operation --> Why not just split this data structure into smaller chunks instead?
+	#didn't work either
+  #amount_partitions = 100
+  #is the amount of partitions into that we wanna split the data structure for better processing
+  #start_end_indexes = return_partition_of_data_structure(length(sequencesLists1), amount_partitions)
+  #list_partitions_sequences_list_1 = find_partitions_for_sequences_given_start_end(sortedSequences = sequencesLists1, start_end_indexes)
+  #We set the max Size to all the lists contained in the different partitions
+  #listPartitionsMaxSizeSequenceList1 = mcmapply(setMaxSizePartitionLists, list_partitions_sequences_list_1, replicate(amount_partitions, sequenceLengths, FALSE), mc.cores=1)
+  #and now we need to merge the different partitions
+  #sequencesLists1Max = unlist(listPartitionsMaxSizeSequenceList1,  recursive=FALSE)
+  #dataNormalized1 <- as.data.frame(do.call(rbind, sequencesLists1Max))
+  #we just need to do the same thing for dataNormalized2
+  #list_partitions_sequences_list_2 = find_partitions_for_sequences_given_start_end(sortedSequences = sequencesLists2, start_end_indexes)
+  #listPartitionsMaxSizeSequenceList2 = mcmapply(setMaxSizePartitionLists, list_partitions_sequences_list_2, replicate(amount_partitions, sequenceLengths, FALSE), mc.cores=1)
+  #sequencesLists2Max = unlist(listPartitionsMaxSizeSequenceList2, recursive=FALSE)
+  #dataNormalized2 = as.data.frame(do.call(rbind, sequencesLists2Max))
+  #good old sequential version for dataNormalized1 and dataNormalized2
+  #sequencesLists1Max = lapply(sequencesLists1, `length<-`,max(sequenceLengths))
+ # dataNormalized1 <- as.data.frame(do.call(rbind,lapply(sequencesLists1, `length<-`,max(unlist(sequenceLengths)))),stringsAsFactors=FALSE)
+  #dataNormalized2 <- as.data.frame(do.call(rbind,lapply(sequencesLists2, `length<-`,max(unlist(sequenceLengths)))))
+  
+  
+  print("Processing as data frame done")
+  beep()
+  
+  #order sequences and IDs
+  #r contains the order of the elements
   r<-do.call(order,as.list(dataNormalized1))
   myDataFrameS<-dataNormalized1[r,]
   myDataFrameID<-dataNormalized2[r,]
@@ -386,6 +433,9 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   newDataFrameID<-sapply(myDataFrameID,as.vector)
   colnames(newDataFrameS)<-NULL
   colnames(newDataFrameID)<-NULL
+	
+  print("Function application done")
+  beep()
   
   #remove NA values form each sequence	
   orderedSequences<-list()
@@ -402,6 +452,7 @@ sortSequencesWithIDs <- function(list_partitions_sequences){
   }
   
   print("NAs' removal done")
+  beep()
   
   names(orderedSequences)<-rep("sequence",length(orderedSequences))
   names(orderedIDs)<-rep("sequenceID",length(orderedIDs))	  
@@ -429,6 +480,17 @@ generateListsforSequences <- function(sequences)
   sequencesLists2 = lapply(sequencesLists, function(sequenceListElement) sequenceListElement$SequenceID  )
   
   return (list(sequencesLists, sequencesLists1, sequencesLists2))
+}
+
+#Given a partition (i.e: a list of lists): perform an lapply to all the elements of the partitions
+setMaxSizePartitionLists <- function(listSequences1, sequenceLengths)
+{
+  print("Done")
+  sequencesLists1Max = lapply(listSequences1, `length<-`,max(sequenceLengths))
+  rm(listSequences1)
+  gc()
+
+  return(sequencesLists1Max)
 }
 
 
