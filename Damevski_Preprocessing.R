@@ -250,8 +250,8 @@ mark_debug_sessions_with_ID_new <- function(sampleObs, index_initial)
   #now remove from the data frame all the sequences that are marked with a sequence ID = 0
   sampleObsOutput = sampleObs[which(sampleObs$SequenceID != 0), ]
   
-  last_sequence_id = sampleObsOutput$SequenceID[nrow(sampleObsOutput)]
-  amount_sequences = last_sequence_id - index_initial + 1
+  #last_sequence_id = sampleObsOutput$SequenceID[nrow(sampleObsOutput)]
+  amount_sequences = length(unique(sequenceIds))
   
   print(paste("Amount of sequences identified: ", (amount_sequences), sep=""))
   
@@ -466,7 +466,7 @@ remove_long_small_sequences <- function(markedSampleObs)
 
 compute_mean_amount_symbols_per_sequence <- function(sequences_marked)
 {
-  amountSequences = unique(sequences_marked$SequenceID)
+  amountSequences = length(unique(sequences_marked$SequenceID))
   
   overall_amount_symbols = length(sequences_marked$SequenceID)
   
