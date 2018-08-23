@@ -298,3 +298,12 @@ compareModelLogLikelihoodConstrained<-function(LogLikConstrained, LogLikUnconstr
   return(continue)
 }
 
+#Input: a dataframe containingsequences by alphabetical (lexicographical order)
+#Output: a vector containing the duration of each sequence based on the first message in it
+compute_sequences_duration <- function(sequences)
+{
+  
+}
+
+
+

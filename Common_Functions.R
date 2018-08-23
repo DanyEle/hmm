@@ -17,7 +17,7 @@ initialization_phase <- function(dataset_index, input_dataset)
        {
            source("Damevski_Preprocessing.R")
            print("Importing Damevski et al's dataset")
-           #DAMEVSKI PRE-PROCESSING
+           #DAMEVSKI PRE-PROCESSING (i.e: form debug sessions)
            sequences_loaded_list_partitions <- load_marked_sequences_damevski(input_dataset)
          },
        #3
@@ -40,7 +40,6 @@ initialization_phase <- function(dataset_index, input_dataset)
   print(paste("Initializing the process..."))
   initialisedProcess<-initializeHMM(sequences_loaded)
   #sequenceIDs is also sequences_global$sample
-  
   sequences<-initialisedProcess[[1]]
   
   symbols<-initialisedProcess[[2]]

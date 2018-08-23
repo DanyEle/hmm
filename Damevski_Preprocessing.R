@@ -27,7 +27,10 @@ load_marked_sequences_damevski <- function(input_dataset)
   
   sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
                                       outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
-  print("Finished dataset pre-processing ")
+ 
+  
+
+   print("Finished dataset pre-processing ")
   print(Sys.time())
   #Now merge the different partitions into one data table
   sequences_marked = combine_sequences_marked(sequences_marked_split)
@@ -132,8 +135,13 @@ load_filter_dataset_given_name_parallel <- function(dataset_name, outlier_symbol
   
   print(paste("Loaded " , dataset_name, " with ", length(sampleObs$sample), " messages.", sep=""))
   
+  markedSampleObs = mark_debug_sessions_with_ID(sampleObs, index)
+  
+  #now process the sampleObs and remove all the sequences that are too small (< 2 minutes in length) and large sessions (> 100 minutes in length)
+  markedRemovedSampleObs = remove_long_small_sequences(markedSampleObs)
+  
   #Fine, dataset successfully loaded, Now let's start the actual processing of sequences
-  return(mark_debug_sessions_with_ID(sampleObs, index))
+  return(markedRemovedSampleObs)
 }
 
 
@@ -163,7 +171,7 @@ load_filter_single_dataset <- function(messages_to_remove, dataLoaded)
 
 
 
-mark_debug_sessions_with_ID <- function(sampleObs, index_initial)
+mark_debug_sessions_with_ID_new <- function(sampleObs, index_initial)
 {
   FREQUENCY_PRINT = 5000
   #how often we should print an update msg
@@ -311,7 +319,7 @@ log_lik_to_probability <- function(amount_lines, logLikelihood)
 
 
 
-mark_debug_sessions_with_ID_daniele <- function(sampleObs, index)
+mark_debug_sessions_with_ID <- function(sampleObs, index)
 {
   #how often we should print an update msg
   #Print an update every X messages processed in the function "mark_debug_sessions_with_ID"
@@ -414,7 +422,59 @@ mark_debug_sessions_with_ID_daniele <- function(sampleObs, index)
 }
 
 
+remove_long_small_sequences <- function(markedSampleObs)
+{
+  validSequenceIDs = c()
+  
+  #get all the sequence IDs in the sampleObs
+  
+  sequenceIDs = markedSampleObs$SequenceID
+  
+  sequenceIDsUnique = unique(markedSampleObs$SequenceID)
+  
+  #loop through all the sequence IDs
+  i = 1
+  for(id in sequenceIDsUnique)
+  {
+    #find the position of the first occurrence of the index in the vector
+    indexStartSequence = min(which(sequenceIDs == id))
+    #find the position of the last occurrence of the index in the vector
+    indexEndSequence = max(which(sequenceIDs == id))
+    
+    startTimestamp = strptime(markedSampleObs$timestamp[indexStartSequence], format="%Y-%m-%d %H:%M:%S")
+    endTimestamp = strptime(markedSampleObs$timestamp[indexEndSequence], format="%Y-%m-%d %H:%M:%S")
+    
+    sequence_duration =  as.numeric(difftime(endTimestamp, startTimestamp, units="secs"))
+    
+    #if a sequence lasts less than 2 minutes or more than 100 minutes, then it's not valid and we discard it
+    if(sequence_duration >= 120 && sequence_duration <= 6000)
+    {
+      #print(paste("Sequence ", id, " has duration ", sequence_duration))
+      validSequenceIDs[i] = id
+      i = i + 1
+    }
+  }
+  
+  #now make the actual filtering based on the sequence IDs identified
+  removedMarkedSampleObs =  markedSampleObs[which(markedSampleObs$SequenceID %in% validSequenceIDs), ]
+  
+  #now take only the sequences matching the condition
+  return(removedMarkedSampleObs)
+}
 
+
+
+compute_mean_amount_symbols_per_sequence <- function(sequences_marked)
+{
+  amountSequences = unique(sequences_marked$SequenceID)
+  
+  overall_amount_symbols = length(sequences_marked$SequenceID)
+  
+  mean_amount_symbols = overall_amount_symbols / amountSequences
+  
+  print(paste("Overall amount of symbols = ", overall_amount_symbols, " amount of sequences = ", amountSequences, " Mean amount of symbols = ", mean_amount_symbols))
+  
+}
 
 
 
