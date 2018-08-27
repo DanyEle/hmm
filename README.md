@@ -47,7 +47,7 @@ Where "Datasets_Damevski" is the folder where all the datasets are taken from an
 
 ###3 - ALMA dataset: 
 Example invocation: 
-#generate_hmm_workers(N, FALSE, 3, c("LogSourceInformation.txt", "LogEventSet.txt", "LogRuntimeInformation.txt"))
+generate_hmm_workers(N, FALSE, 3, c("LogSourceInformation.txt", "LogEventSet.txt", "LogRuntimeInformation.txt"))
 
 
 
