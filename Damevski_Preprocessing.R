@@ -6,7 +6,7 @@
 #####MAIN FUNCTION#########
 ###########################
 #"input_dataset" = folder where all the different datasets to load are contained in
-load_marked_sequences_damevski <- function(input_dataset)
+load_marked_sequences_damevski <- function(amount_workers, input_dataset)
 {
   messages_to_remove = c("View.OnChangeCaretLine", "View.OnChangeScrollInfo", "View.File",  "Debug.Debug Break Mode",
                          "Debug.Debug Run Mode",  "Debug.DebugType", "Debug.Enter Design Mode" ,"Build.BuildDone", "Build.BuildBegin")
@@ -20,15 +20,13 @@ load_marked_sequences_damevski <- function(input_dataset)
   
   indexes = find_indices_for_partitions(names_datasets_sorted)
   print("Pre-processing started")
-  print(paste("Starting dataset pre-processing of ", length(names_datasets_sorted), "datasets with ", AMOUNT_WORKERS, " workers"))
+  print(paste("Starting dataset pre-processing of ", length(names_datasets_sorted), "datasets with ", amount_workers, " workers"))
   
   library("parallel")
   #PARALLELISM ONLY WORKS ON LINUX, i.e: mc.cores > 2! If mc.cores = 1, then it executes sequentially
   
   sequences_marked_split = mcmapply(load_filter_dataset_given_name_parallel, dataset_name = as.list(names_datasets_sorted), index = indexes,
-                                      outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = AMOUNT_WORKERS) 
- 
-  
+                                      outlier_symbols = replicate(length(names_datasets_sorted), messages_to_remove, FALSE), mc.cores = amount_workers) 
 
    print("Finished dataset pre-processing ")
   print(Sys.time())

@@ -2,7 +2,7 @@
 #Free University of Bolzano-Bozen 2016-2018
 
 
-initialization_phase <- function(dataset_index, input_dataset)
+initialization_phase <- function(amount_workers, dataset_index, input_dataset)
 {
   #Initialization begin
   #Differentiate here between the different datasets to load
@@ -11,6 +11,7 @@ initialization_phase <- function(dataset_index, input_dataset)
        {
           source("MM_Preprocessing.R")
           print("Importing Michael Mairegger's dataset")
+          #don't pass amount_workers, as the MM_preprocessing doesn't occur in parallel and would just load up one dataset
           sequences_loaded_list_partitions <- load_marked_sequences_mm(input_dataset)
          },
        #2
@@ -18,13 +19,13 @@ initialization_phase <- function(dataset_index, input_dataset)
            source("Damevski_Preprocessing.R")
            print("Importing Damevski et al's dataset")
            #DAMEVSKI PRE-PROCESSING (i.e: form debug sessions)
-           sequences_loaded_list_partitions <- load_marked_sequences_damevski(input_dataset)
+           sequences_loaded_list_partitions <- load_marked_sequences_damevski(amount_workers, input_dataset)
          },
        #3
        {
          source("ALMA_Preprocessing.R")
          print(paste("Importing ALMA dataset from", input_dataset))
-         sequences_loaded_list_partitions <- load_marked_sequences_alma(input_dataset)
+         sequences_loaded_list_partitions <- load_marked_sequences_alma(amount_workers, input_dataset)
       }
   )
   #The switch returns sequences_loaded_list_partitions
@@ -76,7 +77,7 @@ initialization_phase <- function(dataset_index, input_dataset)
   
   #Firstly, split the sorted sequences
   #Firstly, take all sortedSequences and find the start and end indexes to split them
-  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), AMOUNT_WORKERS) 
+  start_end_indexes = return_partition_of_data_structure(length(sortedSequences), amount_workers) 
   partitions_sequences_loaded = find_partitions_for_sequences_given_start_end(sortedSequences, start_end_indexes)
   
   

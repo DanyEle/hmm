@@ -40,7 +40,8 @@ generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_
     }
   
     print(paste("Starting initialization phase for amount of workers = ", amount_workers))
-    AMOUNT_WORKERS <<- amount_workers
+    #let's get rid of this global variable, shall we?
+    #AMOUNT_WORKERS <<- amount_workers
     
     #In the initialization phase, we pre-process the dataset and create the initial HMM based on the found observations,
     #passing the so generated HMM to the iterative phase.
@@ -77,7 +78,7 @@ generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_
         #%X for the time
         sink(paste("hmm_iterative_phase_", k, "_interesting_sequences_", format(Sys.time(), "%a %b %d %Y.txt"), sep=""))
       }
-      iterative_phase(k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
+      iterative_phase(amount_workers, k, init[[1]], init[[2]], init[[3]], init[[4]], init[[5]], init[[6]], init[[7]] )
       k <- k + 1
       print(paste("Now with k = ", k, sep=""))
     }
@@ -117,7 +118,7 @@ validate_input_arguments <- function(amount_workers, output_to_file, dataset_ind
 }
 
 
-iterative_phase <- function(k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
+iterative_phase <- function(amount_workers, k, HMMTrained, thetaFrequentSequences, theta, LogLikCur, sequences, sortedSequences, LogLikUnconst)
 {
    
    continue=TRUE
@@ -136,7 +137,7 @@ iterative_phase <- function(k, HMMTrained, thetaFrequentSequences, theta, LogLik
 
     	#it returns: [[1]]=conditionType [[2]] interesting sequences [[3]] interestingness. 
     	#Parallel version fixed, now working properly
-    	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, AMOUNT_WORKERS)
+    	interestingSequencesParts<-computeAllSequencesInterestingnessParallel(thetaFrequentSequences,thetaProbableSequences,HMMTrained,theta, amount_workers)
     	
     	#No interesting sequences identified --> Stop!
     	print(paste("AMOUNT OF INT. SEQUENCES", length(interestingSequencesParts[1, ][[1]])))

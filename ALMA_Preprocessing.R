@@ -10,7 +10,7 @@
 #####MAIN FUNCTION#########
 ###########################
 #input_dataset = [SOURCE_PATH, EVENT_PATH, RUNTIME_PATH]
-load_marked_sequences_alma <- function(input_dataset)
+load_marked_sequences_alma <- function(amount_workers, input_dataset)
 {
   MESSAGES_PER_SEQUENCE = 15
   
@@ -21,7 +21,7 @@ load_marked_sequences_alma <- function(input_dataset)
   
   amount_rows = get_amount_rows_from_file(source_path) 
   #find start and end indexes for the input dataset based on the amount of workers passed
-  start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, AMOUNT_WORKERS, amount_rows) 
+  start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, amount_workers, amount_rows) 
   #now load up the dataset and break it into smaller partitions consisting of data frames
   dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, source_path)  
   indexes = find_indices_for_partitions(dataframes_partitions_dataset) 
@@ -31,7 +31,7 @@ load_marked_sequences_alma <- function(input_dataset)
   runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, event_path, 2) 
   
   
-  print(paste("Starting parallel dataset", source_path  , " with ", AMOUNT_WORKERS, " workers"))
+  print(paste("Starting parallel dataset", source_path  , " with ", amount_workers, " workers"))
   library("parallel")
   
   #debug: 
@@ -42,10 +42,10 @@ load_marked_sequences_alma <- function(input_dataset)
   
   #merge_filter_alma_dataset_parallel(partition_dataframe, index, linesReadEvent, linesReadRuntime)
   
-  print(paste("Reading datasets as table in parallel with", AMOUNT_WORKERS, " workers"))
+  print(paste("Reading datasets as table in parallel with", amount_workers, " workers"))
   
   sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
-                                          eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = AMOUNT_WORKERS ) 
+                                          eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = amount_workers ) 
         
   print("Finished parallel")
   print(Sys.time())
