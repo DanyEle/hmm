@@ -1,9 +1,3 @@
-#Initial "global" variables
-#Locations of the input files
-#Now passing these variables as arguments to the function call itself
-#SOURCE_PATH = "Datasets_ALMA/LogSourceInformation.txt"
-#EVENT_PATH = "Datasets_ALMA/LogEventSet.txt"
-#RUNTIME_PATH = "Datasets_ALMA/LogRuntimeInformation.txt"
 
 
 ########################### 
@@ -12,40 +6,41 @@
 #input_dataset = [SOURCE_PATH, EVENT_PATH, RUNTIME_PATH]
 load_marked_sequences_alma <- function(amount_workers, input_dataset)
 {
-  MESSAGES_PER_SEQUENCE = 15
-  
-  source_path = input_dataset[1]
-  event_path = input_dataset[2]
-  runtime_path = input_dataset[3]
+  source("/home/daniele/HMM_ALMA/init_michele.R")
   
   
-  amount_rows = get_amount_rows_from_file(source_path) 
+  #daniele: actually use the functions initialized
+  info_search = search("forType", "INFO")
+  log_info_parse = parse(input_dataset)
+  #log_info_parse = parse("/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/log2017-03-12T22_48_45.319_2017-03-13T00_00_07.882.xml.gz")
+  java_containers = where("container", "java")
+  java_containers_filtered = 
+  java_classes = select("file")
+  java_routines = select("routine")
+  
+  amount_rows = get_amount_rows_from_data_structure(java_classes) 
   #find start and end indexes for the input dataset based on the amount of workers passed
+  
+  MESSAGES_PER_SEQUENCE = 15
   start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, amount_workers, amount_rows) 
   #now load up the dataset and break it into smaller partitions consisting of data frames
-  dataframes_partitions_dataset <- load_partitions_dataset(start_end_indexes_dataset, source_path)  
-  indexes = find_indices_for_partitions(dataframes_partitions_dataset) 
+  java_classes_partitions <- load_partitions_data_structure(start_end_indexes_dataset, java_classes)  
+  java_routines_partitions  <- load_partitions_data_structure(start_end_indexes_dataset, java_routines)
   
-  #Now we also need to partition the EVENT_PATH based on the start_end_indexes found
-  eventPartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, event_path, 5) 
-  runtimePartitions <- load_partitions_event_runtime_path(start_end_indexes_dataset, event_path, 2) 
+  indexes = find_indices_for_partitions(java_classes_partitions) 
   
-  
-  print(paste("Starting parallel dataset", source_path  , " with ", amount_workers, " workers"))
+  print(paste("Processing datasets in ", input_dataset  , " with ", amount_workers, " workers"))
   library("parallel")
-  
   #debug: 
-  #partition_dataframe = dataframes_partitions_dataset[[1]]
+  #partition_java_classes = java_classes_partitions[[1]]
+  #partition_java_routines = java_routines_partitions[[1]]
   #index = indexes[[1]]
-  #eventPartitions = eventPartitions[[1]]
-  #runtimePartitions = runtimePartitions[[1]]
-  
-  #merge_filter_alma_dataset_parallel(partition_dataframe, index, linesReadEvent, linesReadRuntime)
+  #merge_filter_alma_dataset_parallel(partition_java_class, partition_java_routine, index)
   
   print(paste("Reading datasets as table in parallel with", amount_workers, " workers"))
   
-  sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_dataframe = dataframes_partitions_dataset, index = indexes, 
-                                          eventPartitions = eventPartitions, runtimePartitions = runtimePartitions, mc.cores = amount_workers ) 
+  sequences_marked_split = mcmapply(merge_filter_alma_dataset_parallel, partition_java_classes = java_classes_partitions, partition_java_routines = java_routines_partitions,
+                                  index = indexes, mc.cores = amount_workers ) 
         
   print("Finished parallel")
   print(Sys.time())
@@ -57,89 +52,62 @@ load_marked_sequences_alma <- function(amount_workers, input_dataset)
 
 
 #Merge the "File" and "Routine" columns, then remove all the ones not matching the condition for them
-merge_filter_alma_dataset_parallel <- function(partition_dataframe, index, eventPartitions, runtimePartitions)
+merge_filter_alma_dataset_parallel <- function(partition_java_classes, partition_java_routines, index)
 {
   
-  #getting the linesRead as input, now actually turning them into a proper data frame
-  partition_dataframe = read.table(textConnection(partition_dataframe), col.names = c("File", "Line", "Routine"), header=T)
-  
-  #Now we need to put together the "File" and "Routine" columns for one partition
-  #OK
-  print("Merging data frame columns")
-  partitionDataFrameMerged = data.frame(sample=(paste(partition_dataframe$File, "::", partition_dataframe$Routine, sep="")))
+  print("Merging java classes and routines")
+  java_classes_routines_df = data.frame(sample=(paste(partition_java_classes, "::", partition_java_routines, sep="")))
   #Firstly, need to assign the sequence ID. Then, need to filter. 
   print("Finding sequence ID")
-  sequenceIDs = find_sequence_ids_given_messages(partitionDataFrameMerged$sample, index)
-  partitionDataFrameMerged$SequenceID = sequenceIDs
+  sequenceIDs = find_sequence_ids_given_messages(java_classes_routines_df$sample, index)
+  java_classes_routines_df$SequenceID = sequenceIDs
   
-  print("Filtering messages")
-  sampleMessagesPartition = filter_messages_for_data_frame(partitionDataFrameMerged, eventPartitions, runtimePartitions)
-  #sequenceIDs = find_sequence_ids_given_messages(sampleMessagesPartition, index)
   
-  #now assign one sequence ID to every message of the data frame, after filtering them
-  dataFrameReturn = data.frame(data.frame(matrix(ncol = 2, nrow = length(sampleMessagesPartition$SequenceID))))
+  #now assign one sequence ID to every message of the data frame,
+  dataFrameReturn = data.frame(data.frame(matrix(ncol = 2, nrow = length(java_classes_routines_df$SequenceID))))
   colnames(dataFrameReturn) = c("sample", "SequenceID")
-  
   
   if(length(dataFrameReturn$SequenceID) > 0)
   {
-    dataFrameReturn$SequenceID = sampleMessagesPartition$SequenceID
-    dataFrameReturn$sample = sampleMessagesPartition$sample
+    print(paste("Processed data frame with size", length(dataFrameReturn)))
   }
-  
+  else
+  {
+    print(paste("The merged java classes and routines' data frame has size 0 for partition with index", index))
+  }
   return(dataFrameReturn)
 }
 
 
-
-
-#dataset_begin = At which position (index) data actually starts from in the dataset
-load_partitions_event_runtime_path <- function(start_end_indexes_dataset, event_runtime_path, dataset_begin)
-{
-  linesReadEvent = readLines(event_runtime_path)  
-  linesReadEvent = linesReadEvent[dataset_begin:length(linesReadEvent)]
-  
-  #now actually need to partition it based on the indexes 
-  partitionsEvents = find_partitions_for_sequences_given_start_end(linesReadEvent, start_end_indexes_dataset)
-  #remove eventual NAs existing in the partitions
-  for(i in 1:length(partitionsEvents))
-  {
-    partitionsEvents[[i]] = partitionsEvents[[i]][which(!is.na(partitionsEvents[[i]]))]
-  }
-  
-  return(partitionsEvents)
-}
-
-
-
-get_amount_rows_from_file <- function(source_path)
+get_amount_rows_from_data_structure <- function(java_classes)
 {
   #Now, the dataset only consists of one file
-  file_source_path <- file(source_path)
-  
-  if(length(file_source_path) == 0)
+
+  if(length(java_classes) == 0)
   {
-    stop(paste("No SOURCE DATASET found in the SOURCE_PATH ", source_path ," provided. Did you specify the source_dataset correctly?"))
+    stop(paste("Loaded java classes have size 0. Did you specify the input_dataset variable correctly?"))
   }
-  amount_rows = length(readLines(file_source_path)) - 1 #-1 because of the header in the file
-  close(file_source_path)
+  
+  print(paste("Loaded input classes and methods have size", length(java_classes)))
+  amount_rows = length(java_classes)
+  
   return(amount_rows)
 }
 
 
 
-
-
-load_partitions_dataset <- function(start_end_indexes_dataset, source_path)
+load_partitions_data_structure <- function(start_end_indexes_dataset, data_structure)
 {
-  print("reading lines...")
-  #Fine, we got our dataset_name that is a relative or absolute location of the dataset being considered
-  linesRead = readLines(source_path, skipNul=FALSE)  
-  
   #fine, we got our data frame loaded. We now need to split it into as many partitions as indexes
-  print("generating partitions from the dataset")
-  partitions_data_loaded = find_partitions_for_sequences_given_start_end(linesRead, start_end_indexes_dataset)
+  print(paste("generating ", length(start_end_indexes_dataset), "partitions from the dataset"))
+  
+  partitions_data_loaded = find_partitions_for_sequences_given_start_end(data_structure, start_end_indexes_dataset)
   #keep it like this for now
+  
+  for(i in 1:length(partitions_data_loaded))
+  {
+    print(paste("Partition", i, " has size ", length(partitions_data_loaded[[i]])))
+  }
   
   return(partitions_data_loaded)
 }
@@ -182,32 +150,7 @@ find_sequence_ids_given_messages <- function(list_messages, index)
 }
 
 
-filter_messages_for_data_frame <- function(partitionDataFrameMerged, eventPartitions, runtimePartitions)
-{
-  ####FILTER THE EVENT MESSAGES####
-  #Create a data frame based on the events passed
-  #Remove trailining whitespace
-  eventPartitions = trimws(eventPartitions, which=c("right"))
-  
-  dataLoadedEvent = read.table(textConnection(eventPartitions[1:length(eventPartitions)]),  header=FALSE,  col.names = c("Level", "Timestamp", "LogID", "Priority", "Audience", "Data", "Null"))
-  #However, we are only interested in the "Level" Column actually
-  #Indexes of all levels being "Info"
-  levelsListInfo = which(dataLoadedEvent$Level == "Info")
-  
-  
-  #####FILTER THE RUNTIME MESSAGES
-  #now load up all event logs that are javaContainer processes
-  dataLoadedRuntime = read.table(textConnection(runtimePartitions[1:length(runtimePartitions)]),  header=FALSE,  col.names = c("Host", "Process", "Thread", "SourceObject"))
-  library("stringr")
-  processListRuntime =  which(!is.na(str_match(dataLoadedRuntime$Process, "javaContainer")))
-  ##NB DANIELE: USE AN "AND" HERE
-  indexesIntersectionRunTimeEvent = intersect(levelsListInfo, processListRuntime)
-  
-  #now get all messages (rows) in the data frame at the indexes provided
-  messages_filtered = partitionDataFrameMerged[indexesIntersectionRunTimeEvent, ]
-  
-  return(messages_filtered)
-}
+
 
 
 find_start_end_indexes_dataset <- function(messages_seq, amount_workers, dataset_size)
