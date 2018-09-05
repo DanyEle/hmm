@@ -1,4 +1,4 @@
-
+MESSAGES_PER_SEQUENCE = 15
 
 ########################### 
 #####MAIN FUNCTION#########
@@ -6,6 +6,8 @@
 #input_dataset = [SOURCE_PATH, EVENT_PATH, RUNTIME_PATH]
 load_marked_sequences_alma <- function(amount_workers, input_dataset)
 {
+  #input_dataset = "/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/"
+  
   source("/home/daniele/HMM_ALMA/init_michele.R")
   
   
@@ -14,14 +16,13 @@ load_marked_sequences_alma <- function(amount_workers, input_dataset)
   log_info_parse = parse(input_dataset)
   #log_info_parse = parse("/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/log2017-03-12T22_48_45.319_2017-03-13T00_00_07.882.xml.gz")
   java_containers = where("container", "java")
-  java_containers_filtered = 
+  #java_containers_filtered = where("timestamp", "yyyy-MM-ddTHH-mm-ss.SSS", "yyyy-MM-ddTHH-mm-ss.SSS")
   java_classes = select("file")
   java_routines = select("routine")
   
   amount_rows = get_amount_rows_from_data_structure(java_classes) 
   #find start and end indexes for the input dataset based on the amount of workers passed
   
-  MESSAGES_PER_SEQUENCE = 15
   start_end_indexes_dataset <- find_start_end_indexes_dataset(MESSAGES_PER_SEQUENCE, amount_workers, amount_rows) 
   #now load up the dataset and break it into smaller partitions consisting of data frames
   java_classes_partitions <- load_partitions_data_structure(start_end_indexes_dataset, java_classes)  
@@ -35,7 +36,7 @@ load_marked_sequences_alma <- function(amount_workers, input_dataset)
   #partition_java_classes = java_classes_partitions[[1]]
   #partition_java_routines = java_routines_partitions[[1]]
   #index = indexes[[1]]
-  #merge_filter_alma_dataset_parallel(partition_java_class, partition_java_routine, index)
+  #merge_filter_alma_dataset_parallel(partition_java_classes, partition_java_routines, index)
   
   print(paste("Reading datasets as table in parallel with", amount_workers, " workers"))
   
@@ -45,6 +46,7 @@ load_marked_sequences_alma <- function(amount_workers, input_dataset)
   print("Finished parallel")
   print(Sys.time())
   #Now merge the different partitions into one data table
+
   sequences_marked = combine_sequences_marked(sequences_marked_split)
     
   return(list(sequences_marked, sequences_marked_split))
@@ -55,27 +57,27 @@ load_marked_sequences_alma <- function(amount_workers, input_dataset)
 merge_filter_alma_dataset_parallel <- function(partition_java_classes, partition_java_routines, index)
 {
   
-  print("Merging java classes and routines")
+  #print("Merging java classes and routines")
   java_classes_routines_df = data.frame(sample=(paste(partition_java_classes, "::", partition_java_routines, sep="")))
   #Firstly, need to assign the sequence ID. Then, need to filter. 
-  print("Finding sequence ID")
+  #print("Finding sequence ID")
   sequenceIDs = find_sequence_ids_given_messages(java_classes_routines_df$sample, index)
   java_classes_routines_df$SequenceID = sequenceIDs
   
   
   #now assign one sequence ID to every message of the data frame,
-  dataFrameReturn = data.frame(data.frame(matrix(ncol = 2, nrow = length(java_classes_routines_df$SequenceID))))
-  colnames(dataFrameReturn) = c("sample", "SequenceID")
+  #dataFrameReturn = data.frame(data.frame(matrix(ncol = 2, nrow = length(java_classes_routines_df$SequenceID))))
+  #colnames(dataFrameReturn) = c("sample", "SequenceID")
   
-  if(length(dataFrameReturn$SequenceID) > 0)
+  if(length(java_classes_routines_df$SequenceID) > 0)
   {
-    print(paste("Processed data frame with size", length(dataFrameReturn)))
+    print(paste("Processed data frame with size", length(java_classes_routines_df$SequenceID)))
   }
   else
   {
     print(paste("The merged java classes and routines' data frame has size 0 for partition with index", index))
   }
-  return(dataFrameReturn)
+  return(java_classes_routines_df)
 }
 
 
