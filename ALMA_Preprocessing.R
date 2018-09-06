@@ -1,4 +1,4 @@
-MESSAGES_PER_SEQUENCE = 15
+MESSAGES_PER_SEQUENCE = 95
 
 ########################### 
 #####MAIN FUNCTION#########
@@ -6,19 +6,51 @@ MESSAGES_PER_SEQUENCE = 15
 #input_dataset = [SOURCE_PATH, EVENT_PATH, RUNTIME_PATH]
 load_marked_sequences_alma <- function(amount_workers, input_dataset)
 {
-  #input_dataset = "/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/"
+  input_dataset = "/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/"
   
   source("/home/daniele/HMM_ALMA/init_michele.R")
   
   
   #daniele: actually use the functions initialized
-  info_search = search("forType", "INFO")
-  log_info_parse = parse(input_dataset)
-  #log_info_parse = parse("/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/log2017-03-12T22_48_45.319_2017-03-13T00_00_07.882.xml.gz")
-  java_containers = where("container", "java")
-  #java_containers_filtered = where("timestamp", "yyyy-MM-ddTHH-mm-ss.SSS", "yyyy-MM-ddTHH-mm-ss.SSS")
-  java_classes = select("file")
-  java_routines = select("routine")
+  search("forType", "INFO")
+  parse(input_dataset)
+  where("container", "CONTROL/ACC/javaContainer")
+  #select("component")
+  where("component", "Array")
+  java_classes_info = select("file")   #_info
+  java_routines_info = select("routine")  #_info
+  java_timestamps_info = select("timestamp") #_info
+  
+  #clear()
+  #search("forType", "WARNING")
+  #parse(input_dataset)
+  #where("container", "CONTROL/ACC/javaContainer")
+  #select("component")
+  #where("component", "Array")
+  #java_classes_warning = select("file")
+  #java_routines_warning = select("routine")
+ # java_timestamps_warning = select("timestamp")
+
+  #clear()
+
+  #search("forType", "ERROR")
+ # parse(input_dataset)
+  #where("container", "CONTROL/ACC/javaContainer")
+  #select("component")
+  #where("component", "Array")
+  #java_classes_error = select("file")
+  #java_routines_error = select("routine")
+  #java_timestamps_error = select("timestamp")
+
+  #concatenate the results found
+  #java_classes = c(java_classes_info, java_classes_error, java_classes_warning)
+  #java_routines = c(java_routines_info, java_routines_error, java_routines_warning)
+  #java_timestamps = c(java_timestamps_info, java_timestamps_error, java_timestamps_warning)
+
+  #now sort the java_classes and java_routines according to the order of the java_timestamps
+  #numbers_order = order(java_classes)
+  #java_classes = java_classes[numbers_order]
+  #java_routines = java_routines[numbers_order]
   
   amount_rows = get_amount_rows_from_data_structure(java_classes) 
   #find start and end indexes for the input dataset based on the amount of workers passed
