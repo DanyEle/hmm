@@ -6,51 +6,48 @@ MESSAGES_PER_SEQUENCE = 95
 #input_dataset = [SOURCE_PATH, EVENT_PATH, RUNTIME_PATH]
 load_marked_sequences_alma <- function(amount_workers, input_dataset)
 {
-  input_dataset = "/home/daniele/HMM_ALMA/APE1/SYSTEM/2017-03-13/"
-  
+  input_dataset = "/media/daniele/66D6DE91D6DE60BB/Users/Daniele/Ubuntu_Transfer/ALMA_Logs/All_Logs/"
   source("/home/daniele/HMM_ALMA/init_michele.R")
   
+  #now loop through all the datasets in the input folder specified
+  all_datasets = list.files(path=input_dataset)
   
-  #daniele: actually use the functions initialized
-  search("forType", "INFO")
-  parse(input_dataset)
-  where("container", "CONTROL/ACC/javaContainer")
-  #select("component")
-  where("component", "Array")
-  java_classes_info = select("file")   #_info
-  java_routines_info = select("routine")  #_info
-  java_timestamps_info = select("timestamp") #_info
+  #Array of all unique developers
+  print(paste("Getting all datasets' names and sizes in the folder ", input_dataset))
+  i = 1
   
-  #clear()
-  #search("forType", "WARNING")
-  #parse(input_dataset)
-  #where("container", "CONTROL/ACC/javaContainer")
-  #select("component")
-  #where("component", "Array")
-  #java_classes_warning = select("file")
-  #java_routines_warning = select("routine")
- # java_timestamps_warning = select("timestamp")
-
-  #clear()
-
-  #search("forType", "ERROR")
- # parse(input_dataset)
-  #where("container", "CONTROL/ACC/javaContainer")
-  #select("component")
-  #where("component", "Array")
-  #java_classes_error = select("file")
-  #java_routines_error = select("routine")
-  #java_timestamps_error = select("timestamp")
+  java_classes = c()
+  java_routines = c()
+  java_timestamps = c()
+  for (dataset in all_datasets)
+  {
+    dataset_name = paste(input_dataset,"", dataset, sep="")
+    print(dataset_name)
+    classes_routines_timestamps = get_java_class_routines_timestamp_from_input_dataset(dataset_name, "ERROR")
+    java_classes[i] = classes_routines_timestamps[1]
+    java_routines[i] = classes_routines_timestamps[2]
+    java_timestamps[i] = classes_routines_timestamps[3]
+    clear()
+    i = i + 1
+    
+    print(paste("We are at ", i ," / ", length(all_datasets)))
+  }
+  
+  #unwrap and get the unique java classes
+  java_classes_unique = unique(unlist(java_classes))
+  
+  #same thing for the routines
+  java_routines_unique = unique(unlist(java_routines))
 
   #concatenate the results found
-  #java_classes = c(java_classes_info, java_classes_error, java_classes_warning)
-  #java_routines = c(java_routines_info, java_routines_error, java_routines_warning)
-  #java_timestamps = c(java_timestamps_info, java_timestamps_error, java_timestamps_warning)
+  java_classes = c(java_classes_error, java_classes_warning) #java_classes_info
+  java_routines = c(java_routines_error, java_routines_warning) #java_routines_info
+  java_timestamps = c(java_timestamps_error, java_timestamps_warning) #java_timestamps_info
 
   #now sort the java_classes and java_routines according to the order of the java_timestamps
-  #numbers_order = order(java_classes)
-  #java_classes = java_classes[numbers_order]
-  #java_routines = java_routines[numbers_order]
+  numbers_order = order(java_classes)
+  java_classes = java_classes[numbers_order]
+  java_routines = java_routines[numbers_order]
   
   amount_rows = get_amount_rows_from_data_structure(java_classes) 
   #find start and end indexes for the input dataset based on the amount of workers passed
@@ -82,6 +79,25 @@ load_marked_sequences_alma <- function(amount_workers, input_dataset)
   sequences_marked = combine_sequences_marked(sequences_marked_split)
     
   return(list(sequences_marked, sequences_marked_split))
+}
+
+
+#filter can be one of the following three types:
+- "INFO"
+- "WARNING"
+- "ERROR"
+get_java_class_routines_timestamp_from_input_dataset <- function(input_dataset, filter)
+{
+   search("forType", filter)
+   parse(input_dataset)
+   where("container", "CONTROL/ACC/javaContainer")
+   select("component")
+   array = where("component", "Array")
+   java_classes = select("file")   #_info
+   java_routines = select("routine")  #_info
+   java_timestamps = select("timestamp") #_info
+   
+   return(list(java_classes, java_routines, java_timestamps))
 }
 
 
