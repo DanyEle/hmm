@@ -51,7 +51,7 @@ generate_hmm_workers <- function(amount_workers=1, output_to_file=NULL, dataset_
     }
     
     #NB: Only the initialization phase differs from dataset to dataset. The iterative phase is equal for any dataset
-    init = initialization_phase(dataset_index, input_dataset)  
+    init = initialization_phase(amount_workers, dataset_index, input_dataset)  
     
     if(output_to_file == TRUE)
     {
