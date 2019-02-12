@@ -62,5 +62,20 @@ This script allows for the creation of Hidden Markov Models iteratively, namely 
 3. Run the remaining code until the end of the iterative_phase method
 --> Go back to (1)
 
+##Publications:
 
+The present script was used in "Mining Logs to Model the Use of a System", published at ESEM '17. If you would like to use this script as part of your publication, please include the following reference:
+
+@INPROCEEDINGS{GadlerHMM, 
+author={D. Gadler and M. Mairegger and A. Janes and B. Russo}, 
+booktitle={2017 ACM/IEEE International Symposium on Empirical Software Engineering and Measurement (ESEM)}, 
+title={Mining Logs to Model the Use of a System}, 
+year={2017}, 
+volume={}, 
+number={}, 
+pages={334-343}, 
+keywords={business data processing;data mining;hidden Markov models;mining logs;process models;process managers;ideal process model;process improvement;software system;Hidden Markov Models;process mining tools;Hidden Markov models;Tools;Companies;Mobile communication;Log analysis;Process modelling;Hidden Markov Chain}, 
+doi={10.1109/ESEM.2017.47}, 
+ISSN={}, 
+month={Nov},}
 
