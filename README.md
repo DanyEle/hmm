@@ -62,7 +62,7 @@ This script allows for the creation of Hidden Markov Models iteratively, namely 
 3. Run the remaining code until the end of the iterative_phase method
 --> Go back to (1)
 
-##Publications:
+## Publications:
 
 The present script was used in "Mining Logs to Model the Use of a System", published at ESEM '17. If you would like to use this script as part of your publication, please include the following reference:
 
