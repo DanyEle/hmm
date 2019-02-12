@@ -64,7 +64,7 @@ This script allows for the creation of Hidden Markov Models iteratively, namely 
 
 ## Publications:
 
-The present script was used in "Mining Logs to Model the Use of a System", published at ESEM '17. If you would like to use this script as part of your publication, please include the following reference:
+The present script was used in "Mining Logs to Model the Use of a System", published at ESEM '17: https://ieeexplore.ieee.org/document/8170120?reload=true. If you would like to use this script as part of your publication, please include the following reference:
 
 @INPROCEEDINGS{GadlerHMM, 
 author={D. Gadler and M. Mairegger and A. Janes and B. Russo}, 
